@@ -9,6 +9,7 @@ from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
 from scipy import stats
 import numpy as np
+import numpy.matlib
 
 __author__ = "Vítor Lopes dos Santos"
 __version__ = "2019.1"
@@ -138,7 +139,7 @@ def extractPatterns(actmat, significance, method):
     return patterns
 
 
-def runPatterns(actmat, method='ica', nullhyp='mp', nshu=1000, percentile=99, tracywidom=False):
+def runPatterns(actmat, method='ica', nullhyp='circ', nshu=1000, percentile=99, tracywidom=False):
     '''
     INPUTS
 
