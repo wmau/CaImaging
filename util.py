@@ -103,7 +103,7 @@ def read_eztrack(csv_fname, cm_per_pixel=1):
     """
     Reads ezTrack outputs.
 
-    Parameter
+    Parameters
     ---
     csv_fname: str, path to tracking .csv from ezTrack.
     cm_per_pixel: float, centimeters per pixel.
@@ -127,6 +127,17 @@ def read_eztrack(csv_fname, cm_per_pixel=1):
 def synchronize_time_series(position, neural, behav_fps=30, neural_fps=15):
     """
     Synchronizes behavior and neural time series by interpolating behavior.
+
+    :parameters
+    ---
+    position: dict, output from read_ezTrack().
+    neural: (neuron, t) array, any time series output from minian (e.g., C, S).
+    behav_fps: float, sampling rate of behavior video.
+    neural_fps: float, sampling rate of minian data.
+
+    :return
+    ---
+    position: dict, interpolated data based on neural sampling rate.
 
     """
     # Get number of frames in each video.
