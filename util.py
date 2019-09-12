@@ -1,6 +1,5 @@
 import os
 import xarray as xr
-from moviepy.editor import VideoFileClip, concatenate_videoclips
 from natsort import natsorted
 import glob
 import pandas as pd

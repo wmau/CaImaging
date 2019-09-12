@@ -5,7 +5,6 @@ import os
 import matplotlib.pyplot as plt
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams.update({'font.size': 12})
-from scipy.stats import binned_statistic_2d
 
 class PlaceFields():
     def __init__(self, x, y, neural_data, bin_size_cm=20):

@@ -9,12 +9,33 @@ import pickle
 
 class SpatialFootprints():
     def __init__(self, mouse_path):
+        """
+        Class that handles spatial footprint-related stuff. Currently only
+        makes the .mat file that gets fed into Ziv Lab's CellReg Matlab package.
+        ***Currently requires that your files are organized like this***:
+        -animal
+            -session
+                -session_id (which contains minian folder)
+
+        :parameter
+        ---
+        mouse_path: str, animal folder (see  above)
+
+        """
         # Define paths.
         self.mouse_path = mouse_path
         self.session_paths = [folder.parent for folder in Path(self.mouse_path).rglob('minian')]
         self.session_numbers = [folder.parts[-2] for folder in self.session_paths]
 
     def make_mat(self, save_path=None):
+        """
+        Makes spatial footprints .mat for CellReg Matlab package.
+
+        :parameter
+        ---
+        save_path: str, path to save .mat file. Defaults to a folder called
+            SpatialFootprints inside the session_id folder.
+        """
         if save_path is None:
             save_path = os.path.join(self.mouse_path, 'SpatialFootprints')
 
@@ -30,7 +51,7 @@ class SpatialFootprints():
             # Load data.
             data = open_minian(session)
 
-            # Reshape matrix.
+            # Reshape matrix. CellReg reads (neuron, x, y) arrays.
             footprints = np.asarray(data.A)
             footprints = np.rollaxis(footprints, 2)
 
