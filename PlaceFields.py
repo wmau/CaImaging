@@ -3,6 +3,8 @@ from util import synchronize_time_series as sync
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams.update({'font.size': 12})
 from scipy.stats import binned_statistic_2d
 
 class PlaceFields():
