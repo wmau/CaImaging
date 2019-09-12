@@ -167,6 +167,7 @@ def synchronize_time_series(position, neural, behav_fps=30, neural_fps=15):
 
     return position
 
+
 if __name__ == '__main__':
     path = r'D:\Projects\GTime\Data\G123\2\H14_M46_S20'
     behav_path = os.path.join(path, 'Behavior', 'Merged_tracked.csv')

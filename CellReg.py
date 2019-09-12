@@ -72,8 +72,30 @@ class CellRegObj:
 
         """
         self.path = path
-        self.data, self.file  = self.read_cellreg_output()
-        self.compile_cellreg_data()
+
+        try:
+            self.map = self.load_cellreg_results()
+        except:
+            self.data, self.file  = self.read_cellreg_output()
+            self.compile_cellreg_data()
+
+    def load_cellreg_results(self, mode='map'):
+        """
+        After having already running CellRegObj, load the saved pkl file.
+
+        """
+        # Get file name based on mode.
+        file_dict = {'map': 'CellRegResults.pkl',
+                     'footprints': 'CellRegFootprints.pkl',
+                     'centroids': 'CellRegCentroids.pkl',
+                     }
+        fname = os.path.join(self.path, file_dict[mode])
+
+        # Open pkl file.
+        with open(fname, 'rb') as file:
+            data = pickle.load(file)
+
+        return data
 
     def read_cellreg_output(self):
         """
