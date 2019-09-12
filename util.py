@@ -100,13 +100,13 @@ def concat_avis(path, pattern='behavCam*.avi',
     return final_clip_name
 
 
-def read_eztrack(path, cm_per_pixel=1):
+def read_eztrack(csv_fname, cm_per_pixel=1):
     """
     Reads ezTrack outputs.
 
     Parameter
     ---
-    path: str, path to folder containing a csv from ezTrack.
+    csv_fname: str, path to tracking .csv from ezTrack.
     cm_per_pixel: float, centimeters per pixel.
 
     Return
@@ -114,8 +114,6 @@ def read_eztrack(path, cm_per_pixel=1):
     position: dict, with keys x, y, frame, distance.
     """
     # Open file.
-    csv_fname = glob.glob(os.path.join(path, '*_tracked.csv'))
-    assert len(csv_fname) is 1, "Warning: More than one csv found"
     df = pd.read_csv(csv_fname[0])
 
     # Consolidate into dict.
@@ -161,7 +159,7 @@ def synchronize_time_series(position, neural, behav_fps=30, neural_fps=15):
 
 if __name__ == '__main__':
     path = r'D:\Projects\GTime\Data\G123\2\H14_M46_S20'
-    behav_path = os.path.join(path, 'Behavior')
+    behav_path = os.path.join(path, 'Behavior', 'Merged_tracked.csv')
 
     minian = open_minian(path)
     S = np.asarray(minian.S)

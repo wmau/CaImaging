@@ -131,7 +131,8 @@ class PlaceFields():
 
 if __name__ == '__main__':
     dpath = r'D:\Projects\GTime\Data\G123\2\H14_M46_S20'
-    bpath = os.path.join(dpath, 'Behavior')
+    bpath = os.path.join(r'D:\Projects\GTime\Data\G123\2\H14_M46_S20\Behavior',
+                         'Merged_tracked.csv')
     minian = open_minian(dpath)
 
     position = read_eztrack(bpath)
