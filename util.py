@@ -119,20 +119,45 @@ def read_eztrack(path, cm_per_pixel=1):
     df = pd.read_csv(csv_fname[0])
 
     # Consolidate into dict.
-    position = {'x': np.asarray(df['X']) * cm_per_pixel,    # x position
-                'y': np.asarray(df['Y']) * cm_per_pixel,    # y position
+    position = {'x': np.asarray(df['X']) / cm_per_pixel,    # x position
+                'y': np.asarray(df['Y']) / cm_per_pixel,    # y position
                 'frame': np.asarray(df['Frame']),           # Frame number
-                'distance': np.asarray(df['Distance']) * cm_per_pixel} # Distance traveled since last sample
+                'distance': np.asarray(df['Distance']) / cm_per_pixel} # Distance traveled since last sample
 
     return position
 
 
-def synchronize_time_series(behavior, neural):
+def synchronize_time_series(position, neural, behav_fps=30, neural_fps=15):
     """
     Synchronizes behavior and neural time series by interpolating behavior.
 
     """
+    # Get number of frames in each video.
+    neural_nframes = neural.shape[1]
+    behav_nframes = len(position['frame'])
 
+    # Create time vectors.
+    neural_t = np.arange(0, neural_nframes/neural_fps, 1/neural_fps)
+    behav_t = np.arange(0, behav_nframes/behav_fps, 1/behav_fps)
+
+    # Interpolate.
+    position['x'] = np.interp(neural_t, behav_t, position['x'])
+    position['y'] = np.interp(neural_t, behav_t, position['y'])
+    position['frame'] = np.interp(neural_t, behav_t, position['frame'])
+
+    # Normalize.
+    position['x'] = position['x'] - min(position['x'])
+    position['y'] = position['y'] - min(position['y'])
+
+    # Compute distance at each consecutive point.
+    pos_diff = np.diff(position['x']), np.diff(position['y'])
+    position['distance'] = np.hypot(pos_diff[0], pos_diff[1])
+
+    # Compute velocity by dividing by 1/fps.
+    position['velocity'] = \
+        np.concatenate(([0], position['distance']*min((neural_fps, behav_fps))))
+
+    return position
 
 if __name__ == '__main__':
     path = r'D:\Projects\GTime\Data\G123\2\H14_M46_S20'
@@ -141,6 +166,6 @@ if __name__ == '__main__':
     minian = open_minian(path)
     S = np.asarray(minian.S)
 
-    position = read_eztrack(behav_path)
+    position = read_eztrack(behav_path, 20)
 
-    synchronize_time_series(position['frame'], S)
+    synchronize_time_series(position, S)
