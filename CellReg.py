@@ -167,6 +167,97 @@ class CellRegObj:
         with open(filename_centroids, 'wb') as output:
             pickle.dump(centroids, output, protocol=4)
 
+def trim_map(map, cols, detected='everyday'):
+    """
+    Eliminates columns in the neuron mapping array.
+
+    :parameters
+    ---
+    map: (neuron, session) array
+        Neuron mappings.
+
+    cols: list-like
+        Columns of map to keep.
+
+    detected: str
+        'everyday': keeps only the neurons that were detected on
+        each session (column) specified.
+        'either_day': keeps the neurons that were detected on either
+        session specified.
+
+    :return
+    ---
+    trimmed_map: (neuron, session) array
+        Neuron mappings where number of columns is equal to length
+        of cols.
+
+    """
+    # Take only specified columns.
+    trimmed_map = map[:,cols]
+
+    # Eliminate neurons that were not detected on every session.
+    if detected == 'everyday':
+        neurons_detected = (trimmed_map > -1).all(axis=1)
+    elif detected == 'either_day':
+        neurons_detected = (trimmed_map > -1).any(axis=1)
+    elif detected == 'first_day':
+        neurons_detected = trimmed_map[:,0] > -1
+    else:
+        TypeError('Invalid value for detected')
+
+    trimmed_map = trimmed_map[neurons_detected,:]
+
+    return trimmed_map
+
+
+def rearrange_neurons(map, neural_data):
+    """
+    Rearranges (neuron, time) arrays by rows to match the mapping.
+
+    :parameters
+    ---
+    map: (neuron, session) array
+        Neuron mappings.
+
+    neural_data: list of (neuron, time) arrays
+        Neural data (e.g., S). List must be in same order as the
+        columns in map.
+
+    """
+    # Handles cases where only one session was fed in.
+    if map.ndim == 1:
+        map = np.expand_dims(map, 1)
+    neural_data = [neural_data] if not isinstance(neural_data, list) else neural_data
+
+    if not -1 in map:
+        # Do a simple rearrangement of rows based on mappings.
+        rearranged = []
+        for n, session in enumerate(neural_data):
+            rearranged.append(session[map[:,n]])
+
+    else:
+        # Catches cases where -1s (non-matched neurons) are in map.
+        # In this case, iterate through each map column (session)
+        # and then iterate through each neuron. Grab it from neural_data
+        # if it exists, otherwise, fill it with zeros.
+        print('Unmatched neurons detected in map. Padding with zeros')
+        rearranged = []
+
+        for n, session in enumerate(neural_data):
+            # Assume neuron is not active, fill with zeros.
+            rearranged_session = np.zeros((map.shape[0], session.shape[1]))
+
+            # Be sure to only grab neurons if map value is > -1.
+            # Otherwise, it will take the last neuron (-1).
+            for m, neuron in enumerate(map[:,n]):
+                if neuron > -1:
+                    rearranged_session[m] = session[neuron]
+
+            # Append rearranged matrix with paddded zeros.
+            rearranged.append(rearranged_session)
+
+    return rearranged
+
 if __name__ == '__main__':
     path = r'D:\Projects\GTime\Data\G132\SpatialFootprints\CellRegResults'
     CellRegObj(path)
