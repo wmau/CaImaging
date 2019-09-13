@@ -168,13 +168,50 @@ def synchronize_time_series(position, neural, behav_fps=30, neural_fps=15):
     return position
 
 
+def get_transient_timestamps(neural_data, std_thresh=3):
+    """
+    Converts an array of continuous time series (e.g., traces or S)
+    into lists of timestamps where activity exceeds some threshold.
+
+    :parameters
+    ---
+    neural_data: (neuron, time) array
+        Neural time series, (e.g., C or S).
+
+    std_thresh: float
+        Number of standard deviations above the mean to define threshold.
+
+    :returns
+    ---
+    event_times: list of length neuron
+        Each entry in the list contains the timestamps of a neuron's
+        activity.
+
+    event_mags: list of length neuron
+        Event magnitudes.
+
+    """
+    # Compute thresholds for each neuron.
+    stds = np.std(neural_data, axis=1)
+    means = np.mean(neural_data, axis=1)
+    thresh = means * std_thresh*stds
+
+    # Get event times and magnitudes.
+    event_times = [np.where(neuron > t)[0] for neuron, t
+                   in zip(neural_data, thresh)]
+
+    event_mags = [neuron[neuron > t] for neuron, t
+                  in zip(neural_data, thresh)]
+
+    return event_times, event_mags
+
+
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
     path = r'D:\Projects\GTime\Data\G123\2\H14_M46_S20'
-    behav_path = os.path.join(path, 'Behavior', 'Merged_tracked.csv')
+    #behav_path = os.path.join(path, 'Behavior', 'Merged_tracked.csv')
 
     minian = open_minian(path)
     S = np.asarray(minian.S)
 
-    position = read_eztrack(behav_path, 20)
-
-    synchronize_time_series(position, S)
+    get_transient_timestamps(S)
