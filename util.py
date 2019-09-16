@@ -5,6 +5,7 @@ import glob
 import pandas as pd
 import numpy as np
 import cv2
+import itertools
 
 def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
     """
@@ -204,6 +205,59 @@ def get_transient_timestamps(neural_data, std_thresh=3):
                   in zip(neural_data, thresh)]
 
     return event_times, event_mags
+
+
+def distinct_colors(n):
+    def MidSort(lst):
+        if len(lst) <= 1:
+            return lst
+        i = int(len(lst) / 2)
+        ret = [lst.pop(i)]
+        left = MidSort(lst[0:i])
+        right = MidSort(lst[i:])
+        interleaved = [item for items in itertools.zip_longest(left, right)
+                       for item in items if item != None]
+        ret.extend(interleaved)
+        return ret
+
+
+    # Build list of points on a line (0 to 255) to use as color 'ticks'
+    max_ = 255
+    segs = int(n ** (1 / 3))
+    step = int(max_ / segs)
+    p = [(i * step) for i in np.arange(1, segs)]
+    points = [0, max_]
+    points.extend(MidSort(p))
+
+    # Not efficient!!! Iterate over higher valued 'ticks' first (the points
+    #   at the front of the list) to vary all colors and not focus on one channel.
+    colors = ["#%02X%02X%02X" % (points[0], points[0], points[0])]
+    r = 0
+    total = 1
+    while total < n and r < len(points):
+        r += 1
+        for c0 in range(r):
+            for c1 in range(r):
+                for c2 in range(r):
+                    if total >= n:
+                        break
+                    c = "#%02X%02X%02X" % (points[c0], points[c1], points[c2])
+                    if c not in colors and c != '#FFFFFF':
+                        colors.append(c)
+                        total += 1
+
+    return colors
+
+
+def ordered_unique(sequence):
+    seen = set()
+    seen_add = seen.add
+
+    return [x for x in sequence if not (x in seen or seen_add(x))]
+
+
+
+
 
 
 if __name__ == '__main__':

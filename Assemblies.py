@@ -13,7 +13,11 @@ import numpy.matlib
 import matplotlib.pyplot as plt
 
 #### Custom imports start here ####
-from util import open_minian, get_transient_timestamps
+from util import open_minian, get_transient_timestamps, distinct_colors, \
+    ordered_unique
+from itertools import zip_longest
+
+
 from CellReg import CellRegObj, trim_map, rearrange_neurons
 from scipy.ndimage import gaussian_filter1d
 
@@ -274,11 +278,14 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp', n_shuffles=1000,
 
     if compute_activity:
         activations = computeAssemblyActivity(patterns, z_data)
+
+        if plot:
+            spiking = get_transient_timestamps(neural_data)[0]
+
+            sorted_spiking, sorted_colors = membership_sort(patterns, spiking)
+            plot_assemblies(activations, sorted_spiking, colors=sorted_colors)
     else:
         activations = None
-
-    if plot:
-        plt.plot(activations.T)
 
     assembly_dict = {'patterns':        patterns,
                      'significance':    significance,
@@ -288,6 +295,31 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp', n_shuffles=1000,
                      }
 
     return assembly_dict
+
+
+def membership_sort(patterns, neural_data, sort_duplicates=True):
+    """
+    Sorts neurons by their contributions to each pattern.
+
+    :param patterns:
+    :param neural_data:
+    :return:
+    """
+    high_weights = get_important_neurons(patterns)
+    colors = distinct_colors(patterns.shape[0])
+
+    do_not_sort, sorted_data, sorted_colors = [], [], []
+    for color, pattern in zip(colors, high_weights):
+        for neuron in pattern:
+            if neuron not in do_not_sort:
+                sorted_data.append(neural_data[neuron])
+                sorted_colors.append(color)
+
+                if not sort_duplicates:
+                    do_not_sort.append(neuron)
+
+    return sorted_data, sorted_colors
+
 
 
 def lapsed_activation(template_data, lapsed_data,  method='ica',
@@ -323,15 +355,16 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
 
     # Find assembly activations for the template session then the lapsed ones.
     activations = []
-    activations.append(computeAssemblyActivity(patterns,
-                                               gaussian_filter1d(z_data, 2, 1)))
+    activations.append(computeAssemblyActivity(patterns,z_data))
     for session in lapsed_data:
+        # Handle missing data.
         z_session = stats.zscore(session, axis=1)
         imp = SimpleImputer(missing_values=np.nan, strategy='constant',
                             fill_value=0)
         z_session = imp.fit_transform(z_session.T).T
-        z_session = gaussian_filter1d(z_session, 2, 1)
+        #z_session = gaussian_filter1d(z_session, 2, 1)
 
+        # Get activations.
         activations.append(computeAssemblyActivity(patterns, z_session))
 
     # Get event timestamps.
@@ -342,47 +375,107 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
         spiking.append(temp_s)
         rate.append(temp_r)
 
+    # Sort neurons based on membership (weights) in different patterns.
+    sorted_spikes, color_list = [], []
+    for session in spiking:
+        session_sorted, colors_sorted = membership_sort(patterns, session)
+
+        # Do this for each session.
+        color_list.append(colors_sorted)
+        sorted_spikes.append(session_sorted)
+
+
     # Plot assembly activations.
     if plot:
-        plot_assemblies(activations, spiking)
+        plot_assemblies(activations, sorted_spikes, colors=color_list)
 
+        plt.tight_layout()
         plt.show()
 
-    hub_neurons = get_important_neurons(patterns)
 
-    pass
+def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
+    """
+    Plots assembly activations with spikes overlaid.
 
+    :parameters
+    ---
+    assembly_act: list of (patterns, time) arrays
+        Assembly activations.
 
-def plot_assemblies(assembly_act, spiking, do_zscore=True):
+    spiking: (sessions,) list of (neurons,) lists
+        The inner lists should contain timestamps of spiking activity (e.g., from S).
+
+    do_zscore: bool
+        Flag to z-score assembly_act.
+
+    colors: (sessions,) list of (neurons,) lists
+        The inner lists should contain colors for each neuron.
+
+    """
+
+    # Handles cases where you only want to plot one session's assembly.
+    if not isinstance(assembly_act, list):
+        assembly_act = [assembly_act]
+
+        # If colors are not specified, use defaults.
+        if colors is None:
+            colors = distinct_colors(assembly_act[0])
+
+        # spiking should already be a list. Let's also check that it's a list
+        # that's the same size as assembly_act. If not, it's probably a list
+        # of a single session so package it into a list.
+        if len(spiking) != len(assembly_act):
+            spiking = [spiking]
+            colors = [colors]
+
+    # Get color for each assembly.
+    uniq_colors = ordered_unique(colors[0])
+
+    # Build the figure.
     n_sessions = len(assembly_act)
     fig, axes = plt.subplots(n_sessions, 1)
+    if n_sessions == 1:
+        axes = [axes]       # For iteration purposes.
 
-    for n, (ax, act, spikes) in enumerate(zip(axes, assembly_act, spiking)):
+    # For each session, plot each assembly.
+    for n, (ax, act, spikes, c) in \
+            enumerate(zip_longest(axes, assembly_act, spiking, colors,
+                                  fillvalue='k')):
         if do_zscore:
-            act = stats.zscore(act.T, axis=0)
+            act = stats.zscore(act, axis=1)
 
-        ax.plot(act)
+        # Plot assembly activation.
+        for pattern, pattern_color in zip(act, uniq_colors):
+            ax.plot(pattern, color=pattern_color, alpha=0.7)
         ax2 = ax.twinx()
 
-        ylims = ax.get_ylim()
+        # Plot spikes.
+        ax2.eventplot(spikes, colors=c)
         ax.set_ylim(bottom=0)
-        offsets = np.sum(np.abs(ylims))
-        ax2.eventplot(spikes)
         ax2.set_ylim(bottom=0)
 
 
 def get_important_neurons(patterns, mode='raw', n=10):
+    """
+    Gets the most highly contributing neurons from each pattern.
 
+    :parameters
+    ---
+    patterns: (patterns, neurons) array
+        Weights for each neuron.
+
+    mode: 'raw' or 'percentile'
+        Determines whether to interpret n as a percentile or the raw number.
+
+    n: float
+        Percentile or number of neurons to extract from pattern weightings. 
+    """
     if mode == 'percentile':
         n = (100-n) * patterns.shape[1]
 
     inds = []
     for pattern in patterns:
         inds.append(np.argpartition(pattern, -n)[-n:])
-
-    # i = 2
-    # plt.stem(range(480), patterns[i])
-    # plt.stem(hub_neurons[i], patterns[i][hub_neurons[i]], markerfmt='ro')
 
     return inds
 
@@ -404,9 +497,10 @@ if __name__ == '__main__':
     #
     # lapsed_activation(template[0], [lapsed])
 
-    map = trim_map(C.map, [0,1], detected='everyday')
+    map = trim_map(C.map, [0,1], detected='either_day')
     template = np.asarray(minian1.S)
     lapsed = rearrange_neurons(map[:,1], [np.asarray(minian2.S)])
     template = rearrange_neurons(map[:,0], [template])
 
     lapsed_activation(template[0], lapsed)
+    #find_assemblies(template)
