@@ -195,16 +195,18 @@ def get_transient_timestamps(neural_data, std_thresh=3):
     # Compute thresholds for each neuron.
     stds = np.std(neural_data, axis=1)
     means = np.mean(neural_data, axis=1)
-    thresh = means * std_thresh*stds
+    thresh = means + std_thresh*stds
 
     # Get event times and magnitudes.
+    bool_arr = neural_data > np.tile(thresh,[neural_data.shape[1], 1]).T
+
     event_times = [np.where(neuron > t)[0] for neuron, t
                    in zip(neural_data, thresh)]
 
     event_mags = [neuron[neuron > t] for neuron, t
                   in zip(neural_data, thresh)]
 
-    return event_times, event_mags
+    return event_times, event_mags, bool_arr
 
 
 def distinct_colors(n):

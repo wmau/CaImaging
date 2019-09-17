@@ -188,7 +188,8 @@ def runPatterns(actmat, method='ica', nullhyp='circ', nshu=1000, percentile=99, 
     zactmat_ = stats.zscore(actmat_, axis=1)
 
     # Impute missing values.
-    imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+    imp = SimpleImputer(missing_values=np.nan, strategy='constant',
+                        fill_value=0)
     zactmat_ = imp.fit_transform(zactmat_.T).T
 
     # running significance (estimating number of assemblies)
@@ -271,17 +272,17 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp', n_shuffles=1000,
         (n/a if nullhyp is NOT 'mp')
 
     """
+    spiking, _, bool_arr = get_transient_timestamps(neural_data)
+
     patterns, significance, z_data = \
-        runPatterns(neural_data, method=method, nullhyp=nullhyp,
+        runPatterns(bool_arr, method=method, nullhyp=nullhyp,
                     nshu=n_shuffles, percentile=percentile,
                     tracywidom=tracywidow)
 
     if compute_activity:
-        activations = computeAssemblyActivity(patterns, z_data)
+        activations = computeAssemblyActivity(patterns, bool_arr)
 
         if plot:
-            spiking = get_transient_timestamps(neural_data)[0]
-
             sorted_spiking, sorted_colors = membership_sort(patterns, spiking)
             plot_assemblies(activations, sorted_spiking, colors=sorted_colors)
     else:
@@ -340,7 +341,6 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
         Neural activity from other sessions.
     """
     # Useful variables.
-    n_sessions = len(lapsed_data) + 1
     lapsed_data = [lapsed_data] if not isinstance(lapsed_data, list) else lapsed_data
 
     # For cases where you want to specify which neurons to consider for some
@@ -348,15 +348,25 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
     if neurons is not None:
         template_data = template_data[neurons]
 
+    # Get event timestamps.
+    spiking, rate, bool_arr = get_transient_timestamps(template_data)
+    spiking, rate, bool_arr = [spiking], [rate], [bool_arr]
+    for session in lapsed_data:
+        temp_s, temp_r, temp_bool = get_transient_timestamps(session)
+        spiking.append(temp_s)
+        rate.append(temp_r)
+        bool_arr.append(temp_bool)
+
     # Get patterns.
     patterns, significance, z_data = \
-        runPatterns(template_data, method=method, nullhyp=nullhyp,
+        runPatterns(bool_arr[0], method=method, nullhyp=nullhyp,
                     nshu=n_shuffles, percentile=percentile)
 
     # Find assembly activations for the template session then the lapsed ones.
     activations = []
-    activations.append(computeAssemblyActivity(patterns,z_data))
-    for session in lapsed_data:
+    # bool_arr[0] used to be z_data
+    activations.append(computeAssemblyActivity(patterns, bool_arr[0]))
+    for session in bool_arr[1:]:
         # Handle missing data.
         z_session = stats.zscore(session, axis=1)
         imp = SimpleImputer(missing_values=np.nan, strategy='constant',
@@ -367,13 +377,6 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
         # Get activations.
         activations.append(computeAssemblyActivity(patterns, z_session))
 
-    # Get event timestamps.
-    spiking, rate = get_transient_timestamps(template_data)
-    spiking, rate = [spiking], [rate]
-    for session in lapsed_data:
-        temp_s, temp_r = get_transient_timestamps(session)
-        spiking.append(temp_s)
-        rate.append(temp_r)
 
     # Sort neurons based on membership (weights) in different patterns.
     sorted_spikes, color_list = [], []
@@ -503,10 +506,10 @@ if __name__ == '__main__':
     #
     # lapsed_activation(template[0], [lapsed])
 
-    map = trim_map(C.map, [0,1], detected='either_day')
+    map = trim_map(C.map, [0,1], detected='everyday')
     template = np.asarray(minian1.S)
     lapsed = rearrange_neurons(map[:,1], [np.asarray(minian2.S)])
     template = rearrange_neurons(map[:,0], [template])
 
     lapsed_activation(template[0], lapsed)
-    #find_assemblies(template)
+    #find_assemblies(template[0])
