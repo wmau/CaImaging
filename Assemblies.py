@@ -468,7 +468,13 @@ def get_important_neurons(patterns, mode='raw', n=10):
         Determines whether to interpret n as a percentile or the raw number.
 
     n: float
-        Percentile or number of neurons to extract from pattern weightings. 
+        Percentile or number of neurons to extract from pattern weightings.
+
+    :return
+    ---
+    inds: (patterns,) list of (n,) arrays
+        Neuron indices.
+
     """
     if mode == 'percentile':
         n = (100-n) * patterns.shape[1]
