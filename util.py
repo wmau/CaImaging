@@ -210,6 +210,19 @@ def get_transient_timestamps(neural_data, std_thresh=3):
 
 
 def distinct_colors(n):
+    """
+    Returns n colors that are maximally psychophysically distinct.
+
+    :parameter
+    ---
+    n: int
+        Number of colors that you want.
+
+    :return
+    colors: n list of strings
+        Each str is a hex code corresponding to a color.
+
+    """
     def MidSort(lst):
         if len(lst) <= 1:
             return lst
@@ -252,13 +265,25 @@ def distinct_colors(n):
 
 
 def ordered_unique(sequence):
+    """
+    Returns unique values in sequence that's in the same order as
+    presented.
+
+    :parameter
+    ---
+    sequence: array-like
+        Sequence of anything.
+
+    :return
+    ---
+    unique_items: list
+        Contains unique items from list, in order of presentation.
+
+    """
     seen = set()
     seen_add = seen.add
 
     return [x for x in sequence if not (x in seen or seen_add(x))]
-
-
-
 
 
 
