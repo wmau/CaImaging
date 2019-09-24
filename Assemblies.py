@@ -221,6 +221,7 @@ def runPatterns(actmat, method='ica', nullhyp='circ', nshu=1000, percentile=99, 
         zactmat = np.copy(actmat)
         zactmat[~silentneurons, :] = zactmat_
 
+
     return patterns, significance, zactmat
 
 
@@ -483,7 +484,7 @@ def get_important_neurons(patterns, mode='raw', n=10):
         n = (100-n) * patterns.shape[1]
 
     inds = []
-    for pattern in patterns:
+    for pattern in np.abs(patterns):
         inds.append(np.argpartition(pattern, -n)[-n:])
 
     return inds
