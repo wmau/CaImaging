@@ -1,4 +1,4 @@
-from util import open_minian
+from util import open_minian, dir_dict, find_dict_entries
 from pathlib import Path
 import os
 from scipy.io import savemat
@@ -6,6 +6,7 @@ import numpy as np
 import glob
 import h5py
 import pickle
+
 
 class SpatialFootprints():
     def __init__(self, mouse_path):
@@ -78,6 +79,7 @@ class CellRegObj:
         except:
             self.data, self.file  = self.read_cellreg_output()
             self.compile_cellreg_data()
+            self.map = self.load_cellreg_results()
 
     def load_cellreg_results(self, mode='map'):
         """
@@ -166,6 +168,7 @@ class CellRegObj:
             pickle.dump(footprints, output, protocol=4)
         with open(filename_centroids, 'wb') as output:
             pickle.dump(centroids, output, protocol=4)
+
 
 def trim_map(map, cols, detected='everyday'):
     """
@@ -258,6 +261,38 @@ def rearrange_neurons(map, neural_data):
 
     return rearranged
 
+
+def get_cellreg_path(mouse, dict_list=dir_dict(), animal_key = 'Animal',
+                     cellreg_key='CellRegPath'):
+    """
+    Grabs the path containing CellRegResults folder from a dict
+    made by dir_dict().
+
+    :parameters
+    ---
+    mouse: str
+        Mouse name.
+
+    dict_list: list of dicts
+        From dir_dict(). Should contain a key 'Animal' or something
+        similar denoting animal name.
+
+    animal_key: str
+        A dict key labeling your animals.
+
+    cellreg_key: str
+        A dict key labeling the path to CellRegResults.
+
+    :return
+    ---
+    path: str
+        Path to CellRegResults folder.
+
+    """
+    entries = find_dict_entries(dict_list, animal_key, mouse)
+    path = entries[0][cellreg_key]
+
+    return path
+
 if __name__ == '__main__':
-    path = r'D:\Projects\GTime\Data\G132\SpatialFootprints\CellRegResults'
-    CellRegObj(path)
+    get_cellreg_path('G132')
