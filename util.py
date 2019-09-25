@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import cv2
 import itertools
+from csv import DictReader
 
 def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
     """
@@ -286,13 +287,42 @@ def ordered_unique(sequence):
     return [x for x in sequence if not (x in seen or seen_add(x))]
 
 
+def dir_dict(csv_path=r'D:\Projects\GTime\Data\GTime1.csv'):
+    """
+    Converts a csv containing session metadata into a dict. Useful
+    for compiling all the paths for a project. csv should have
+    some number of columns with a label.
+
+    :parameter
+    ---
+    csv_path: str
+        Path to csv. Default is the GTime1.csv on Will's desktop.
+
+    :return
+    ---
+    dict_list: list of dicts
+        List of dictionaries corresponding to the number of rows in
+        the csv. Each entry in the list has keys (columns) filled in
+        with the value for each row in the csv.
+
+    """
+    dict_list = []
+    with open(csv_path, 'r') as file:
+        csv_file = DictReader(file)
+
+        for entry in csv_file:
+            dict_list.append({k: v for k, v in zip(entry.keys(),
+                                                   entry.values())})
+
+    return dict_list
+
+
+def find_dict_entries(dict_list, key, value):
+    entries = list(filter(lambda d: d[key] == value, dict_list))
+
+    return entries
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    path = r'D:\Projects\GTime\Data\G123\2\H14_M46_S20'
-    #behav_path = os.path.join(path, 'Behavior', 'Merged_tracked.csv')
 
-    minian = open_minian(path)
-    S = np.asarray(minian.S)
-
-    get_transient_timestamps(S)
+    dir_dict()
