@@ -14,11 +14,12 @@ import matplotlib.pyplot as plt
 
 #### Custom imports start here ####
 from util import open_minian, get_transient_timestamps, distinct_colors, \
-    ordered_unique
+    ordered_unique, find_dict_entries
+import util
 from itertools import zip_longest
 
 
-from CellReg import CellRegObj, trim_map, rearrange_neurons
+from CellReg import CellRegObj, trim_map, rearrange_neurons, get_cellreg_path
 from scipy.ndimage import gaussian_filter1d
 
 
@@ -273,7 +274,7 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp', n_shuffles=1000,
         (n/a if nullhyp is NOT 'mp')
 
     """
-    spiking, _, bool_arr = get_transient_timestamps(neural_data)
+    spiking, _, bool_arr = util.get_transient_timestamps(neural_data)
 
     patterns, significance, z_data = \
         runPatterns(bool_arr, method=method, nullhyp=nullhyp,
@@ -308,7 +309,7 @@ def membership_sort(patterns, neural_data, sort_duplicates=True):
     :return:
     """
     high_weights = get_important_neurons(patterns)
-    colors = distinct_colors(patterns.shape[0])
+    colors = util.distinct_colors(patterns.shape[0])
 
     do_not_sort, sorted_data, sorted_colors = [], [], []
     for color, pattern in zip(colors, high_weights):
@@ -350,10 +351,10 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
         template_data = template_data[neurons]
 
     # Get event timestamps.
-    spiking, rate, bool_arr = get_transient_timestamps(template_data)
+    spiking, rate, bool_arr = util.get_transient_timestamps(template_data)
     spiking, rate, bool_arr = [spiking], [rate], [bool_arr]
     for session in lapsed_data:
-        temp_s, temp_r, temp_bool = get_transient_timestamps(session)
+        temp_s, temp_r, temp_bool = util.get_transient_timestamps(session)
         spiking.append(temp_s)
         rate.append(temp_r)
         bool_arr.append(temp_bool)
@@ -423,7 +424,7 @@ def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
 
         # If colors are not specified, use defaults.
         if colors is None:
-            colors = distinct_colors(assembly_act[0])
+            colors = util.distinct_colors(assembly_act[0])
 
         # spiking should already be a list. Let's also check that it's a list
         # that's the same size as assembly_act. If not, it's probably a list
@@ -433,7 +434,7 @@ def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
             colors = [colors]
 
     # Get color for each assembly.
-    uniq_colors = ordered_unique(colors[0])
+    uniq_colors = util.ordered_unique(colors[0])
 
     # Build the figure.
     n_sessions = len(assembly_act)
@@ -490,13 +491,17 @@ def get_important_neurons(patterns, mode='raw', n=10):
     return inds
 
 if __name__ == '__main__':
-    dpath1 = r'D:\Projects\GTime\Data\G132\1\H11_M0_S21'
-    dpath2 = r'D:\Projects\GTime\Data\G132\2\H15_M43_S22'
-    dpath8 = r'D:\Projects\GTime\Data\G132\8\H11_M5_S56 - G132.1'
-    cellregpath = r'D:\Projects\GTime\Data\G132\SpatialFootprints\CellRegResults'
-    minian1 = open_minian(dpath1)
-    minian2 = open_minian(dpath2)
-    minian8 = open_minian(dpath8)
+    s1 = 3
+    s2 = 4
+    mouse = 'G132'
+    dict_list = util.dir_dict()
+    entries = util.find_dict_entries(dict_list, 'Animal', mouse)
+    cellregpath = get_cellreg_path(mouse)
+
+    minian_outputs = []
+    for entry in entries:
+        minian_outputs.append(open_minian(entry['Path']))
+
     C = CellRegObj(cellregpath)
 
 
@@ -507,9 +512,9 @@ if __name__ == '__main__':
     #
     # lapsed_activation(template[0], [lapsed])
 
-    map = trim_map(C.map, [0,1], detected='everyday')
-    template = np.asarray(minian1.S)
-    lapsed = rearrange_neurons(map[:,1], [np.asarray(minian2.S)])
+    map = trim_map(C.map, [s1,s2], detected='either_day')
+    template = np.asarray(minian_outputs[s1].S)
+    lapsed = rearrange_neurons(map[:,1], [np.asarray(minian_outputs[s2].S)])
     template = rearrange_neurons(map[:,0], [template])
 
     lapsed_activation(template[0], lapsed)
