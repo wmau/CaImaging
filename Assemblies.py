@@ -392,10 +392,14 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
 
     # Plot assembly activations.
     if plot:
-        plot_assemblies(activations, sorted_spikes, colors=color_list)
+        fig, axes = plot_assemblies(activations, sorted_spikes, colors=color_list)
 
         plt.tight_layout()
         plt.show()
+    else:
+        fig, axes = None, None
+
+    return activations, patterns, sorted_spikes, fig, axes
 
 
 def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
@@ -459,6 +463,8 @@ def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
         ax.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
 
+    return fig, axes
+
 
 def get_important_neurons(patterns, mode='raw', n=10):
     """
@@ -491,16 +497,16 @@ def get_important_neurons(patterns, mode='raw', n=10):
     return inds
 
 if __name__ == '__main__':
-    s1 = 3
-    s2 = 4
+    s1 = 0
+    s2 = 2
     mouse = 'G132'
     dict_list = util.dir_dict()
-    entries = util.find_dict_entries(dict_list, 'Animal', mouse)
+    entries = util.find_dict_entries(dict_list, **{'Animal': mouse})
     cellregpath = get_cellreg_path(mouse)
 
     minian_outputs = []
     for entry in entries:
-        minian_outputs.append(open_minian(entry['Path']))
+        minian_outputs.append(open_minian(entry['DataPath']))
 
     C = CellRegObj(cellregpath)
 

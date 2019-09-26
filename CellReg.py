@@ -289,7 +289,7 @@ def get_cellreg_path(mouse, dict_list=dir_dict(), animal_key = 'Animal',
         Path to CellRegResults folder.
 
     """
-    entries = find_dict_entries(dict_list, animal_key, mouse)
+    entries = find_dict_entries(dict_list, **{animal_key: mouse})
     path = entries[0][cellreg_key]
 
     return path

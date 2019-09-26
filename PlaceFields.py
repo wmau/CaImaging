@@ -1,4 +1,4 @@
-from util import open_minian, read_eztrack
+from util import open_minian, read_eztrack, dir_dict, find_dict_entries, load_session
 from util import synchronize_time_series as sync
 import numpy as np
 import os
@@ -23,7 +23,7 @@ class PlaceFields():
 
 
     def plot_dots(self, neuron, std_thresh=2, pos_color='k',
-                  transient_color='r'):
+                  transient_color='r', ax=None):
         """
         Plots a dot plot. Position samples with suprathreshold activity
         dots overlaid.
@@ -44,25 +44,42 @@ class PlaceFields():
         supra_thresh = self.neural_data[neuron] > thresh
 
         # Plot.
-        plt.scatter(self.x, self.y, s=3, c=pos_color)
-        plt.scatter(self.x[supra_thresh], self.y[supra_thresh],
+        if ax is None:
+            fig, ax = plt.subplots()
+
+        ax.scatter(self.x, self.y, s=3, c=pos_color)
+        ax.scatter(self.x[supra_thresh], self.y[supra_thresh],
                     s=3, c=transient_color)
 
 
 
-    def bin(self, x, y, bin_size_cm=20, plot=True, weights=None):
+    def bin(self, x, y, bin_size_cm=20, plot=True, weights=None, ax=None):
         """
         Spatially bins the position data.
 
         :parameters
         ---
-        bin_size_cm: float, bin size in centimeters.
-        plot: bool, flag for plotting.
+        x,y: array-like
+            Vector of x and y positions.
+
+        bin_size_cm: float
+            Bin size in centimeters.
+
+        plot: bool
+            Flag for plotting.
+
+        weights: array-like
+            Vector the same size as x and y, describing weights for
+            spatial binning. Used for making place fields (weights
+            are booleans indicating timestamps of activity).
 
         :returns
         ---
-        H: (nx,ny) array, 2d histogram of position.
-        xedges, yedges: (n+1,) array, bin edges along each dimension.
+        H: (nx,ny) array
+            2d histogram of position.
+
+        xedges, yedges: (n+1,) array
+            Bin edges along each dimension.
         """
         # Calculate the min and max of position.
         x_extrema = [min(self.x), max(self.x)]
@@ -81,11 +98,14 @@ class PlaceFields():
 
         # Plot.
         if plot:
-            plt.imshow(H)
+            if ax is None:
+                fig, ax = plt.subplots()
+
+            ax.imshow(H)
 
         return H
 
-    def make_occupancy_map(self, bin_size_cm=20, plot=True):
+    def make_occupancy_map(self, bin_size_cm=20, plot=True, ax=None):
         """
         Makes the occupancy heat map of the animal.
 
@@ -99,9 +119,13 @@ class PlaceFields():
                                       bin_size_cm=bin_size_cm, plot=plot)
 
         if plot:
-            plt.imshow(self.occupancy_map, origin='lower')
+            if ax is None:
+                fig, ax = plt.subplots()
 
-    def make_place_field(self, neuron, bin_size_cm=20, plot=True):
+            ax.imshow(self.occupancy_map, origin='lower')
+
+    def make_place_field(self, neuron, bin_size_cm=20, plot=True,
+                         ax=None):
         """
         Bins activity in space. Essentially a 2d histogram weighted by
         neural activity.
@@ -123,19 +147,21 @@ class PlaceFields():
         # Normalize by occupancy.
         pf = pf / self.occupancy_map
         if plot:
-            plt.imshow(pf, origin='lower')
+            if ax is None:
+                fig, ax = plt.subplots()
+
+            ax.imshow(pf, origin='lower')
 
         return pf
 
 
 if __name__ == '__main__':
-    dpath = r'D:\Projects\GTime\Data\G123\2\H14_M46_S20'
-    bpath = os.path.join(r'D:\Projects\GTime\Data\G123\2\H14_M46_S20\Behavior',
-                         'Merged_tracked.csv')
-    minian = open_minian(dpath)
+    mouse = 'G132'
+    session = 4
 
-    position = read_eztrack(bpath)
-    position = sync(position, np.asarray(minian.S))
+    data = load_session(**{'Animal': mouse, 'Session': str(session)})[0]
 
-    P = PlaceFields(position['x'], position['y'], np.asarray(minian.S))
+
+    P = PlaceFields(data['Behavior']['x'], data['Behavior']['y'],
+                    data['NeuralData'])
     P.plot_dots(1)
