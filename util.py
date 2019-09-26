@@ -115,7 +115,7 @@ def read_eztrack(csv_fname, cm_per_pixel=1):
     position: dict, with keys x, y, frame, distance.
     """
     # Open file.
-    df = pd.read_csv(csv_fname[0])
+    df = pd.read_csv(csv_fname)
 
     # Consolidate into dict.
     position = {'x': np.asarray(df['X']) / cm_per_pixel,    # x position
@@ -317,12 +317,93 @@ def dir_dict(csv_path=r'D:\Projects\GTime\Data\GTime1.csv'):
     return dict_list
 
 
-def find_dict_entries(dict_list, key, value):
-    entries = list(filter(lambda d: d[key] == value, dict_list))
+def find_dict_entries(dict_list, mode='and', **kwargs):
+    """
+    Finds the dictionary entry (or entries) that corresponds to
+    the key and value in kwargs
+
+    To get all AM entries in G132:
+    find_dict_entries(dict_list, mode='and', **{'Animal: 'G132', 'Notes':'AM'})
+
+    Replacing the above mode with 'or' gets all AM entries
+    or all G132 entries.
+
+    :parameters
+    ---
+    dict_list: list of dicts
+        From dir_dict()
+
+    mode: str ('and', 'or')
+        Whether to intersect or union the entries that match
+        the kwargs dict.
+
+    kwargs: dict with any number of keys, values
+        The function will match dict_list entries to these pairings.
+
+    :return
+    ---
+    entries: list of dicts
+        Entries that satisfy key=value.
+    """
+    if mode == 'and':
+        for key, value in kwargs.items():
+            dict_list = [d for d in dict_list if d[key] == value]
+
+        entries = dict_list
+    elif mode == 'or':
+        entries = []
+        for key, value in kwargs.items():
+            entries.extend(d for d in dict_list if d[key] == value and d not in entries)
+    else:
+        TypeError('Mode not supported')
 
     return entries
+
+
+def load_session(master_csv=r'D:\Projects\GTime\Data\GTime1.csv',
+                 data_key='DataPath', behavior_key='BehaviorCSV',
+                 minian_attr='S', **kwargs):
+    """
+    Loads and synchronizes behavior and imaging. Specify which
+    sessions to load in the kwargs dict (which is fed into find_dict_entries).
+
+    :parameters
+    ---
+    master_csv: str
+        Path to the master csv that contains metadata for all sessions.
+
+    data_key: str
+        The dict key (csv column title) corresponding to minian path.
+
+    behavior_key: str
+        Dict key corresponding to behavior CSV.
+
+    minian_attr: str
+        Data from minian output that you want to load in.
+
+    kwargs: dict
+        Key, value pairings specifying which sessions you want to load.
+        Example: {'Animal': 'G132', 'Notes': 'AM'}
+
+    """
+    # Get sessions.
+    dict_list = dir_dict(master_csv)
+    sessions = find_dict_entries(dict_list, **kwargs)
+
+    for session in sessions:
+        # Load neural data.
+        session['NeuralData'] = \
+            np.asarray(getattr(open_minian(session[data_key]),
+                               minian_attr))
+
+        # Load and sync behavior.
+        session['Behavior'] = \
+            synchronize_time_series(read_eztrack(session[behavior_key]),
+                                    session['NeuralData'])
+
+    return sessions
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    dir_dict()
+    load_session(**{'Animal': 'G132'})
