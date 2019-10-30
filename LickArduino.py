@@ -24,8 +24,7 @@ def read_Arduino(com_port=default_port, fname='data.txt'):
     try:
         while True:
             data = ser.readline()
-            now = time.time()
-            now = str(datetime.utcfromtimestamp(now))
+            now = str(time.time())
 
             if data:
                 with open(fname, 'ab+') as file:
