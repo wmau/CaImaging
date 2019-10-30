@@ -105,6 +105,7 @@ class PlaceFields():
 
         return H
 
+
     def make_occupancy_map(self, bin_size_cm=20, plot=True, ax=None):
         """
         Makes the occupancy heat map of the animal.
@@ -123,6 +124,7 @@ class PlaceFields():
                 fig, ax = plt.subplots()
 
             ax.imshow(self.occupancy_map, origin='lower')
+
 
     def make_place_field(self, neuron, bin_size_cm=20, plot=True,
                          ax=None):
