@@ -24,9 +24,9 @@ def read_Arduino(com_port=default_port, fname='data.txt'):
     try:
         while True:
             data = ser.readline()
-            now = str(time.time())
 
             if data:
+                now = str(time.time())
                 with open(fname, 'ab+') as file:
                     line = now + ', ' + data.decode('utf-8')
                     file.write(line.encode('utf-8'))
