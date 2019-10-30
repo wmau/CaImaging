@@ -25,11 +25,15 @@ def read_Arduino(com_port=default_port, fname='data.txt'):
         while True:
             data = ser.readline()
 
-            if data:
+            if 'last_data' not in locals():
+                last_data = 0
+
                 now = str(time.time())
                 with open(fname, 'ab+') as file:
                     line = now + ', ' + data.decode('utf-8')
                     file.write(line.encode('utf-8'))
+
+                last_data = data
 
     except KeyboardInterrupt:
         ser.close()
