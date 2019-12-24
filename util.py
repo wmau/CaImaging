@@ -7,6 +7,8 @@ import numpy as np
 import cv2
 import itertools
 from csv import DictReader
+from math import sqrt
+from scipy.stats import norm
 
 def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
     """
@@ -101,7 +103,7 @@ def concat_avis(path, pattern='behavCam*.avi',
     return final_clip_name
 
 
-def read_eztrack(csv_fname, cm_per_pixel=1):
+def read_eztrack(csv_fname):
     """
     Reads ezTrack outputs.
 
@@ -118,12 +120,12 @@ def read_eztrack(csv_fname, cm_per_pixel=1):
     df = pd.read_csv(csv_fname)
 
     # Consolidate into dict.
-    position = {'x': np.asarray(df['X']) / cm_per_pixel,    # x position
-                'y': np.asarray(df['Y']) / cm_per_pixel,    # y position
+    position = {'x': np.asarray(df['X']),    # x position
+                'y': np.asarray(df['Y']),    # y position
                 'frame': np.asarray(df['Frame']),           # Frame number
-                'distance': np.asarray(df['Distance']) / cm_per_pixel} # Distance traveled since last sample
+                'distance': np.asarray(df['Distance_in'])} # Distance traveled since last sample
 
-    return position
+    return pd.DataFrame(position)
 
 
 def synchronize_time_series(position, neural, behav_fps=30, neural_fps=15):
@@ -402,6 +404,129 @@ def load_session(master_csv=r'D:\Projects\GTime\Data\GTime1.csv',
                                     session['NeuralData'])
 
     return sessions
+
+
+def brownian(x0, n, dt, delta, out=None):
+    """
+    Generate an instance of Brownian motion (i.e. the Wiener process):
+
+        X(t) = X(0) + N(0, delta**2 * t; 0, t)
+
+    where N(a,b; t0, t1) is a normally distributed random variable with mean a and
+    variance b.  The parameters t0 and t1 make explicit the statistical
+    independence of N on different time intervals; that is, if [t0, t1) and
+    [t2, t3) are disjoint intervals, then N(a, b; t0, t1) and N(a, b; t2, t3)
+    are independent.
+
+    Written as an iteration scheme,
+
+        X(t + dt) = X(t) + N(0, delta**2 * dt; t, t+dt)
+
+
+    If `x0` is an array (or array-like), each value in `x0` is treated as
+    an initial condition, and the value returned is a numpy array with one
+    more dimension than `x0`.
+
+    Arguments
+    ---------
+    x0 : float or numpy array (or something that can be converted to a numpy array
+         using numpy.asarray(x0)).
+        The initial condition(s) (i.e. position(s)) of the Brownian motion.
+    n : int
+        The number of steps to take.
+    dt : float
+        The time step.
+    delta : float
+        delta determines the "speed" of the Brownian motion.  The random variable
+        of the position at time t, X(t), has a normal distribution whose mean is
+        the position at time t=0 and whose variance is delta**2*t.
+    out : numpy array or None
+        If `out` is not None, it specifies the array in which to put the
+        result.  If `out` is None, a new numpy array is created and returned.
+
+    Returns
+    -------
+    A numpy array of floats with shape `x0.shape + (n,)`.
+
+    Note that the initial value `x0` is not included in the returned array.
+    """
+
+    x0 = np.asarray(x0)
+
+    # For each element of x0, generate a sample of n numbers from a
+    # normal distribution.
+    r = norm.rvs(size=x0.shape + (n,), scale=delta * sqrt(dt))
+
+    # If `out` was not given, create an output array.
+    if out is None:
+        out = np.empty(r.shape)
+
+    # This computes the Brownian motion by forming the cumulative sum of
+    # the random samples.
+    np.cumsum(r, axis=-1, out=out)
+
+    # Add the initial condition.
+    out += np.expand_dims(x0, axis=-1)
+
+    return out
+
+
+def consecutive_dist(x, axis=0):
+    """
+    Calculates the the distance between consecutive points in a vector.
+
+    :parameter
+    ---
+    x: array-like, vector of values.
+
+    :return
+    ---
+    dists: array-like, distances.
+    """
+    delta = np.diff(x, axis=axis)
+    dists = np.hypot(delta[:,0], delta[:,1])
+
+    return dists
+
+
+def add_arrow(line, position=None, direction='right', size=15, color=None):
+    """
+    add an arrow to a line.
+
+    line:       Line2D object
+    position:   x-position of the arrow. If None, mean of xdata is taken
+    direction:  'left' or 'right'
+    size:       size of the arrow in fontsize points
+    color:      if None, line color is taken.
+    """
+    if color is None:
+        color = line.get_color()
+
+    xdata = line.get_xdata()
+    ydata = line.get_ydata()
+
+    if position is None:
+        position = xdata.mean()
+    # find closest index
+    start_ind = np.argmin(np.absolute(xdata - position))
+    if direction == 'right':
+        end_ind = start_ind + 1
+    else:
+        end_ind = start_ind - 1
+
+    line.axes.annotate('',
+        xytext=(xdata[start_ind], ydata[start_ind]),
+        xy=(xdata[end_ind], ydata[end_ind]),
+        arrowprops=dict(arrowstyle="->", color=color),
+        size=size
+    )
+
+
+def find_closest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+
+    return idx, array[idx]
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt

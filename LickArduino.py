@@ -1,9 +1,9 @@
 import serial.tools.list_ports
 from datetime import datetime
 import time
-import numpy as np
-import csv
+import glob
 import os
+import pandas as pd
 
 # This is the default port from Will's desktop computer.
 # Change as needed to correspond to connected Arduino.
@@ -101,5 +101,36 @@ def read_Arduino(com_port=default_port,
         ser.close()
         pass
 
+
+def clean_Arduino_output(fpath):
+    """
+    Load Arduino txt output into a clean format.
+
+    :parameter
+    ---
+    fpath: str
+        Full file path to Arduino txt file.
+
+    :returns
+    ---
+    data: DataFrame
+        DataFrame with columns Data, Frame, Timestamp.
+        Data is either: "Lap", "Water", or an integer 0-7 indicating port.
+
+    offset: int
+        Offset in milliseconds between Arduino and DAQ.
+    """
+    data = pd.read_csv(fpath)
+    data.columns = ['Data','Frame','Timestamp']
+    data.astype({'Frame': int, 'Timestamp': int})
+    data = data[data['Frame'] > 0]  # Only take data when the DAQ was on.
+
+    # Also grab the offset between Arduino and DAQ
+    offset = int(os.path.split(fpath)[1][-8:-4])
+
+    return data, offset
+
 if __name__ == '__main__':
-    read_Arduino()
+    #read_Arduino()
+    folder = r'D:\Projects\CircleTrack\Mouse2\12_18_2019'
+    fname = glob.glob(os.path.join(folder, 'H**_M**_S**.**** ****.txt'))[0]
