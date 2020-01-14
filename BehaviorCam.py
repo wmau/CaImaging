@@ -8,21 +8,48 @@ import pandas as pd
 from LickArduino import clean_Arduino_output
 
 
-def make_tracking_video(vid_fname, csv_fname, output_fname='Tracking.avi',
-                        start=0, stop=None, fps=30, Arduino_fpath=None):
+def make_tracking_video(vid_path, csv_path, output_fname='Tracking.avi',
+                        start=0, stop=None, fps=30, Arduino_path=None):
+    """
+    Makes a video to visualize licking at water ports and position of the animal.
+
+    :parameters
+    ---
+    video_fname: str
+        Full path to the behavior video.
+
+    csv_fname: str
+        Full path to the csv file from EZTrack.
+
+    output_fname: str
+        Desired file name for output. It will be saved to the same folder
+        as the data.
+
+    start: int
+        Frame to start on.
+
+    stop: int or None
+        Frame to stop on or if None, the end of the movie.
+
+    fps: int
+        Sampling rate of the behavior camera.
+
+    Arduino_path:
+        Full path to the Arduino output txt. If None, doesn't plot licking.
+
+    """
     # Get behavior video.
-    vid = cv2.VideoCapture(vid_fname)
+    vid = cv2.VideoCapture(vid_path)
     if stop is None:
         stop = int(vid.get(7))  # 7 is the index for total frames.
 
-    # Get file name of output.
-    if output_fname == 'Tracking.avi':
-        file_path = os.path.split(vid_fname)[0]
-        output_fname = os.path.join(file_path, output_fname)
+    # Save data to the same folder.
+    folder = os.path.split(vid_path)[0]
+    output_path = os.path.join(folder, output_fname)
 
-    # Get eztrack data.
-    if Arduino_fpath is not None:
-        eztrack = sync_Arduino_outputs(Arduino_fpath, csv_fname)[0]
+    # Get EZtrack data.
+    if Arduino_path is not None:
+        eztrack = sync_Arduino_outputs(Arduino_path, csv_path)[0]
         eztrack = clean_lick_detection(eztrack)
         port_colors = ['saddlebrown',
                        'red',
@@ -33,11 +60,13 @@ def make_tracking_video(vid_fname, csv_fname, output_fname='Tracking.avi',
                        'darkviolet',
                        'gray']
     else:
-        eztrack = read_eztrack(csv_fname)
+        eztrack = read_eztrack(csv_path)
+        port_colors = None
 
+    # Make video.
     fig, ax = plt.subplots()
     writer = FFMpegWriter(fps=fps)
-    with writer.saving(fig, output_fname, 100):
+    with writer.saving(fig, output_path, 100):
         for frame_number in np.arange(start, stop):
             # Plot frame.
             vid.set(1, frame_number)
@@ -50,7 +79,7 @@ def make_tracking_video(vid_fname, csv_fname, output_fname='Tracking.avi',
             ax.scatter(x, y, marker='+', s=60, c='r')
 
             # Lick indicator.
-            if Arduino_fpath is not None:
+            if Arduino_path is not None:
                 licking_at_port = eztrack.at[frame_number, 'lick_port']
                 if licking_at_port >= 0:
                     ax.scatter(50, 50, s=100, c=port_colors[licking_at_port])
@@ -67,7 +96,7 @@ def sync_Arduino_outputs(Arduino_fpath, eztrack_fpath, behav_cam=2):
     """
     This function is meant to be used in conjunction with the above
     functions and Miniscope software recordings. Miniscope software
-    will save videos (behavior and imaging) in a timestamped folder
+    will save videos (behavior and imaging) in a timestamped folder.
 
     :param folder:
     :return:
@@ -107,9 +136,19 @@ def sync_Arduino_outputs(Arduino_fpath, eztrack_fpath, behav_cam=2):
 
 def find_water_ports_circletrack(eztrack_data):
     """
+    Use the x and y extrema to locate water port locations. Requires that the
+    maze be positioned so that a port is at the 12 o'clock position. Which port
+    is not important -- the code can be modified for any orientation.
 
-    :param eztrack_fpath:
-    :return:
+    :parameter
+    ---
+    eztrack_data: cleaned DataFrame from sync_Arduino_outputs()
+
+    :return
+    ---
+    ports: DataFrame
+        DataFrame with 'x' and 'y' columns corresponding to x and y positions of
+        each water port.
     """
     # Get circular track
     x_extrema = [min(eztrack_data.x), max(eztrack_data.x)]
@@ -140,6 +179,21 @@ def find_water_ports_circletrack(eztrack_data):
 
 
 def clean_lick_detection(eztrack_data, threshold = 80):
+    """
+    Clean lick detection data by checking that the mouse is near the port during
+    a detected lick.
+
+    :parameters
+    ---
+    eztrack_data: cleaned DataFrame from sync_Arduino_outputs()
+
+    threshold: float
+        Distance threshold (in pixels) to be considered "near" the port.
+
+    :return
+    ---
+    eztrack_data: cleaned DataFrame after eliminating false positives. 
+    """
     ports = find_water_ports_circletrack(eztrack_data)
 
     lick_frames = eztrack_data[eztrack_data.lick_port > -1]
@@ -161,7 +215,7 @@ if __name__ == '__main__':
     vid_fname = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12\Merged.avi'
     Arduino_fpath = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12.3896 1428.txt'
     eztrack_fpath = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12\Merged_LocationOutput.csv'
-    make_tracking_video(vid_fname, eztrack_fpath, Arduino_fpath=Arduino_fpath)
+    make_tracking_video(vid_fname, eztrack_fpath, Arduino_path=Arduino_fpath)
     # Arduino_fpath = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12.3896 1428.txt'
     # eztrack_fpath = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12\Merged_LocationOutput.csv'
     #eztrack_data = sync_Arduino_outputs(Arduino_fpath, eztrack_fpath)[0]
