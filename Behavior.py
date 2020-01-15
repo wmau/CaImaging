@@ -78,6 +78,9 @@ def make_tracking_video(vid_path, csv_path, output_fname='Tracking.avi',
             y = eztrack.at[frame_number, 'y']
             ax.scatter(x, y, marker='+', s=60, c='r')
 
+            ax.text(0, 0, 'Frame: ' + str(frame_number) +
+                    '   Time: ' + str(np.round(frame_number/30, 1)) + ' s')
+
             # Lick indicator.
             if Arduino_path is not None:
                 licking_at_port = eztrack.at[frame_number, 'lick_port']
@@ -121,8 +124,10 @@ def sync_Arduino_outputs(Arduino_fpath, eztrack_fpath, behav_cam=2):
     DAQ_data = DAQ_data[DAQ_data.camNum == behav_cam]
 
     # Find the frame number associated with the timestamp of a lick.
+    sysClock = np.asarray(DAQ_data.sysClock)
     for i, row in Arduino_data.iterrows():
-        closest_time = find_closest(DAQ_data.sysClock, row.Timestamp - offset)[1]
+        closest_time = find_closest(sysClock, row.Timestamp - offset,
+                                    sorted=True)[1]
         frame_num = DAQ_data.loc[DAQ_data.sysClock == closest_time]['frameNum']
         val = row.Data
 
@@ -160,7 +165,10 @@ def find_water_ports_circletrack(eztrack_data):
     radius = np.mean([width_px, height_px])/2
     center = [np.mean(x_extrema), np.mean(y_extrema)]
     theta = np.pi/4     # Angle in between each water port.
-    orientation = [1, 0, 7, 6, 5, 4, 3, 2]  # Determines which port is numbered what according to orientation
+
+    # Determines orientation of the water ports.
+    # List the port number of the port at 12 o'clock and count up.
+    orientation = [7, 0, 1, 2, 3, 4, 5, 6]
     port_angles = [o * theta for o in orientation]
 
     # Calculate port locations.
@@ -170,15 +178,24 @@ def find_water_ports_circletrack(eztrack_data):
     ports = pd.DataFrame(ports)
 
     # Debugging purposes.
+    # port_colors = ['saddlebrown',
+    #                'red',
+    #                'orange',
+    #                'yellow',
+    #                'green',
+    #                'blue',
+    #                'darkviolet',
+    #                'gray']
     # plt.plot(eztrack_data.x, eztrack_data.y)
     # plt.scatter(center[0], center[1], c='r')
-    # plt.scatter(ports['x'], ports['y'], c='g')
+    # for color, (i, port) in zip(port_colors, ports.iterrows()):
+    #     plt.scatter(port['x'], port['y'], c=color)
     # plt.axis('equal')
 
     return ports
 
 
-def clean_lick_detection(eztrack_data, threshold = 80):
+def clean_lick_detection(eztrack_data, threshold=80):
     """
     Clean lick detection data by checking that the mouse is near the port during
     a detected lick.
@@ -192,7 +209,7 @@ def clean_lick_detection(eztrack_data, threshold = 80):
 
     :return
     ---
-    eztrack_data: cleaned DataFrame after eliminating false positives. 
+    eztrack_data: cleaned DataFrame after eliminating false positives.
     """
     ports = find_water_ports_circletrack(eztrack_data)
 
@@ -210,6 +227,61 @@ def clean_lick_detection(eztrack_data, threshold = 80):
 
     return eztrack_data
 
+
+def spatial_bin(x, y, bin_size_cm=20, plot=False, weights=None, ax=None):
+    """
+    Spatially bins the position data.
+
+    :parameters
+    ---
+    x,y: array-like
+        Vector of x and y positions in cm.
+
+    bin_size_cm: float
+        Bin size in centimeters.
+
+    plot: bool
+        Flag for plotting.
+
+    weights: array-like
+        Vector the same size as x and y, describing weights for
+        spatial binning. Used for making place fields (weights
+        are booleans indicating timestamps of activity).
+
+    ax: Axis object
+        If you want to reference an exis that already exists. If None,
+        makes a new Axis object.
+
+    :returns
+    ---
+    H: (nx,ny) array
+        2d histogram of position.
+
+    xedges, yedges: (n+1,) array
+        Bin edges along each dimension.
+    """
+    # Calculate the min and max of position.
+    x_extrema = [min(x), max(x)]
+    y_extrema = [min(y), max(y)]
+
+    # Make bins.
+    xbins = np.linspace(x_extrema[0], x_extrema[1],
+                        np.round(np.diff(x_extrema) / bin_size_cm))
+    ybins = np.linspace(y_extrema[0], y_extrema[1],
+                        np.round(np.diff(y_extrema) / bin_size_cm))
+
+    # Do the binning.
+    H, xedges, yedges = np.histogram2d(y, x,
+                                       [ybins, xbins],
+                                       weights=weights)
+
+    if plot:
+        if ax is None:
+            fig, ax = plt.subplots()
+
+        ax.imshow(H)
+
+    return H, xedges, yedges
 
 if __name__ == '__main__':
     vid_fname = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12\Merged.avi'
