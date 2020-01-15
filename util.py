@@ -10,6 +10,7 @@ from csv import DictReader
 from math import sqrt
 from scipy.stats import norm
 import math
+import matplotlib.pyplot as plt
 
 def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
     """
@@ -545,6 +546,138 @@ def get_data_paths(session_folder, pattern_dict):
         paths[type] = match[0]
 
     return paths
+
+
+class ScrollPlot:
+    def __init__(self,
+                 plot_function,
+                 nrows=1,
+                 ncols=1,
+                 titles=None,
+                 figsize=(8, 6),
+                 current_position=0,
+                 vid_fpath=None,
+                 **kwargs):
+        """
+        Allows you to plot basically anything iterative and scroll through it.
+
+        :parameters
+        ---
+        plot_function: function
+            This function should be written specifically to draw from attrs
+            in this class and plot them.
+
+        nrows, ncols: ints
+            Number of rows or columns in subplots.
+
+        titles: list of strs
+            Should be the same length as the data you want to plot.
+
+        figsize: tuple
+            Size of figure.
+
+        current_position: int
+            Defines the starting point for plotting your iterative stuff.
+
+        kwargs: any key, value combination
+            This is where data to be plotted would go. Also handles any
+            other misc data.
+        """
+        self.plot_function = plot_function
+        self.nrows = nrows
+        self.ncols = ncols
+        self.titles = titles
+        self.figsize = figsize
+        self.current_position = current_position
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+        # In cases where you need to read a video, do so during init.
+        # current_position will set the starting frame.
+        if vid_fpath is not None:
+            self.vid = cv2.VideoCapture(vid_fpath)
+            self.vid.set(1, self.current_position)
+
+        # Make figure.
+        self.fig, (self.ax) = plt.subplots(self.nrows,
+                                           self.ncols,
+                                           figsize=self.figsize)
+
+        # Plot then apply title.
+        self.plot_function(self)
+        try:
+            self.ax.set_title(self.titles[self.current_position])
+        except:
+            pass
+
+        # Connect to keyboard.
+        self.fig.canvas.mpl_connect('key_press_event',
+                                    lambda event: self.update_plots(event))
+
+
+    def scroll(self, event):
+        """
+        Scrolls backwards or forwards using arrow keys. Quit with Esc.
+        """
+        if event.key == 'right' and self.current_position < self.last_position:
+            self.current_position += 1
+        elif event.key == 'left' and self.current_position > 0:
+            self.current_position -= 1
+        elif event.key == 'escape':
+            plt.close(self.fig)
+
+    def update_plots(self, event):
+        """
+        Update the plot with new index.
+        """
+        try:
+            for ax in self.fig.axes:
+                ax.cla()
+        except:
+            self.ax.cla()
+
+        # Scroll then update plot.
+        self.scroll(event)
+        self.plot_function(self)
+        try:
+            self.ax.set_title(self.titles[self.current_position])
+        except:
+            pass
+        self.fig.canvas.draw()
+
+
+def disp_frame(ScrollObj):
+    """
+    Display frame and tracked position. Must specify path to video file
+    during ScrollPlot class instantiation as well as positional data.
+    To use:
+        f = ScrollPlot(disp_frame, current_position = 0,
+                       vid_fpath = 'path_to_video',
+                       x = x_position, y = y_position,
+                       titles = frame_numbers)
+
+    """
+    # Check that ScrollPlot object has all these attrs.
+    attrs = ['vid', 'x', 'y']
+    for attr in attrs:
+        assert hasattr(ScrollObj, attr), (attr + ' missing')
+
+    # Read the frame.
+    try:
+        ScrollObj.vid.set(1, ScrollObj.current_position)
+        ret, frame = ScrollObj.vid.read()
+    except:
+        raise ValueError('Something went wrong with reading video.')
+
+    # Plot the frame and position.
+    ScrollObj.ax.imshow(frame)
+    ScrollObj.ax.scatter(ScrollObj.x[ScrollObj.current_position],
+                         ScrollObj.y[ScrollObj.current_position],
+                         marker='+', s=80, c='r')
+
+    # Find limit.
+    ScrollObj.last_position = int(ScrollObj.vid.get(7))
+
 
 
 if __name__ == '__main__':
