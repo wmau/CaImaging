@@ -1,6 +1,7 @@
 from util import open_minian, read_eztrack, dir_dict, find_dict_entries, load_session
 from util import synchronize_time_series as sync
 import numpy as np
+from Behavior import spatial_bin
 import os
 import matplotlib.pyplot as plt
 plt.rcParams['pdf.fonttype'] = 42
@@ -53,59 +54,6 @@ class PlaceFields():
 
 
 
-    def bin(self, x, y, bin_size_cm=20, plot=True, weights=None, ax=None):
-        """
-        Spatially bins the position data.
-
-        :parameters
-        ---
-        x,y: array-like
-            Vector of x and y positions.
-
-        bin_size_cm: float
-            Bin size in centimeters.
-
-        plot: bool
-            Flag for plotting.
-
-        weights: array-like
-            Vector the same size as x and y, describing weights for
-            spatial binning. Used for making place fields (weights
-            are booleans indicating timestamps of activity).
-
-        :returns
-        ---
-        H: (nx,ny) array
-            2d histogram of position.
-
-        xedges, yedges: (n+1,) array
-            Bin edges along each dimension.
-        """
-        # Calculate the min and max of position.
-        x_extrema = [min(self.x), max(self.x)]
-        y_extrema = [min(self.y), max(self.y)]
-
-        # Make bins.
-        xbins = np.linspace(x_extrema[0], x_extrema[1],
-                            np.round(np.diff(x_extrema)/bin_size_cm))
-        ybins = np.linspace(y_extrema[0], y_extrema[1],
-                            np.round(np.diff(y_extrema)/bin_size_cm))
-
-        # Do the binning.
-        H, xedges, yedges = np.histogram2d(y, x,
-                                           [ybins, xbins],
-                                           weights=weights)
-
-        # Plot.
-        if plot:
-            if ax is None:
-                fig, ax = plt.subplots()
-
-            ax.imshow(H)
-
-        return H
-
-
     def make_occupancy_map(self, bin_size_cm=20, plot=True, ax=None):
         """
         Makes the occupancy heat map of the animal.
@@ -116,8 +64,9 @@ class PlaceFields():
         plot: bool, flag for plotting.
 
         """
-        self.occupancy_map = self.bin(self.x, self.y,
-                                      bin_size_cm=bin_size_cm, plot=plot)
+        self.occupancy_map = spatial_bin(self.x, self.y,
+                                         bin_size_cm=bin_size_cm,
+                                         plot=plot)
 
         if plot:
             if ax is None:
