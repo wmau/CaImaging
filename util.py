@@ -9,6 +9,7 @@ import itertools
 from csv import DictReader
 from math import sqrt
 from scipy.stats import norm
+import math
 
 def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
     """
@@ -522,11 +523,29 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
     )
 
 
-def find_closest(array, value):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
+def find_closest(array, value, sorted=False):
+    if sorted:
+        idx = np.searchsorted(array, value, side="left")
+        if idx > 0 and (idx == len(array) or math.fabs(value - array[idx - 1]) < math.fabs(value - array[idx])):
+            return idx - 1, array[idx - 1]
+        else:
+            return idx, array[idx]
+    else:
+        idx = (np.abs(array - value)).argmin()
 
     return idx, array[idx]
+
+
+def get_data_paths(session_folder, pattern_dict):
+    paths = {}
+    for type, pattern in pattern_dict.items():
+        match = glob.glob(os.path.join(session_folder, pattern))
+        assert len(match) == 1, ('Multiple files/folders detected or none found.')
+
+        paths[type] = match[0]
+
+    return paths
+
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
