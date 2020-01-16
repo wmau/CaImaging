@@ -616,8 +616,57 @@ def disp_frame(ScrollObj):
     ScrollObj.last_position = int(ScrollObj.vid.get(7)) - 1
 
 
+def sync_cameras(timestamp_fpath, miniscope_cam=2, behav_cam=6):
+    """map frames from Cam1 to Cam0 with nearest neighbour using the timestamp file from miniscope recordings.
+
+    Parameters
+    ----------
+    timestamp_fpath: str
+        Full file path to timestamp.dat file.
+        Yields timestamp dataframe. should contain field 'frameNum', 'camNum' and 'sysClock'
+
+    miniscope_cam: int
+        Number corresponding to miniscope camera.
+
+    behav_cam: int
+        Number corresponding to behavior camera.
+
+    Returns
+    -------
+    pd.DataFrame
+        output dataframe. should contain field 'fmCam0' and 'fmCam1'
+    """
+    ts = pd.read_csv(timestamp_fpath, sep="\s+")
+    cam_change = np.abs(behav_cam - miniscope_cam)
+
+    ts["change_point"] = ts["camNum"].diff()
+    ts["ts_behav"] = np.where(ts["change_point"] == cam_change, ts["sysClock"], np.nan)
+    ts["ts_forward"] = ts["ts_behav"].fillna(method="ffill")
+    ts["ts_backward"] = ts["ts_behav"].fillna(method="bfill")
+    ts["diff_forward"] = np.absolute(ts["sysClock"] - ts["ts_forward"])
+    ts["diff_backward"] = np.absolute(ts["sysClock"] - ts["ts_backward"])
+    ts["fm_behav"] = np.where(ts["change_point"] == cam_change, ts["frameNum"], np.nan)
+    ts["fm_forward"] = ts["fm_behav"].fillna(method="ffill")
+    ts["fm_backward"] = ts["fm_behav"].fillna(method="bfill")
+    ts["fmCam1"] = np.where(
+        ts["diff_forward"] < ts["diff_backward"], ts["fm_forward"], ts["fm_backward"]
+    )
+    ts_map = (
+        ts[ts["camNum"] == miniscope_cam][["frameNum", "fmCam1"]]
+            .dropna()
+            .rename(columns=dict(frameNum="fmCam0"))
+            .astype(dict(fmCam1=int))
+    )
+    ts_map["fmCam0"] = ts_map["fmCam0"] - 1
+    ts_map["fmCam1"] = ts_map["fmCam1"] - 1
+
+    return ts_map, ts
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
+    from CircleTrack.utils import grab_paths
 
-    load_session(**{'Animal': 'G132'})
+    folder = r'D:\Projects\CircleTrack\Mouse1\12_20_2019'
+    paths = grab_paths(folder)
+    ts = pd.read_csv(paths['timestamps'], sep="\s+")
+
+    map_ts(ts)
