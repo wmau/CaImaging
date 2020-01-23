@@ -478,9 +478,13 @@ def get_data_paths(session_folder, pattern_dict):
     paths = {}
     for type, pattern in pattern_dict.items():
         match = glob.glob(os.path.join(session_folder, pattern))
-        assert len(match) == 1, ('Multiple files/folders detected or none found.')
+        assert len(match) < 2, ('Multiple possible files/folders detected.')
 
-        paths[type] = match[0]
+        try:
+            paths[type] = match[0]
+        except:
+            print(type + ' not found.')
+            paths[type] = None
 
     return paths
 
@@ -662,6 +666,7 @@ def sync_cameras(timestamp_fpath, miniscope_cam=2, behav_cam=6):
 
     return ts_map, ts
 
+
 if __name__ == '__main__':
     from CircleTrack.utils import grab_paths
 
@@ -669,4 +674,4 @@ if __name__ == '__main__':
     paths = grab_paths(folder)
     ts = pd.read_csv(paths['timestamps'], sep="\s+")
 
-    map_ts(ts)
+    sync_cameras(ts)
