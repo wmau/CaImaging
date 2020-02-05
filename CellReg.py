@@ -41,8 +41,16 @@ class SpatialFootprints():
             save_path = os.path.join(self.mouse_path, 'SpatialFootprints')
 
         cellreg_path = os.path.join(save_path, 'CellRegResults')
-        os.mkdir(save_path)
-        os.mkdir(cellreg_path)
+
+        try:
+            os.mkdir(save_path)
+        except:
+            print('Directory already exists. Proceeding.')
+
+        try:
+            os.mkdir(cellreg_path)
+        except:
+            print('Directory already exists. Proceeding.')
 
         for session, session_number in zip(self.session_paths,
                                            self.session_numbers):

@@ -4,6 +4,8 @@ import time
 import glob
 import os
 import pandas as pd
+import numpy as np
+from scipy.signal import argrelextrema
 
 # This is the default port from Will's desktop computer.
 # Change as needed to correspond to connected Arduino.
@@ -122,8 +124,23 @@ def clean_Arduino_output(fpath):
     """
     data = pd.read_csv(fpath)
     data.columns = ['Data','Frame','Timestamp']
-    data.astype({'Frame': int, 'Timestamp': int})
+
+    # Sometimes there are NaNs. Correct them before converting
+    # everything to integers.
+    try:
+        data.astype({'Frame': int, 'Timestamp': int})
+    except:
+        data.Frame = pd.to_numeric(data.Frame, errors='coerce')
+        bad_frames = np.where(~np.isfinite(data.Frame))[0]
+        print('Ignoring NaNs from these rows: ' + str(bad_frames))
+        data.drop(data.index[bad_frames])
+
+    # Clean up data.
     data = data[data['Frame'] > 0]  # Only take data when the DAQ was on.
+    ts_spikes = argrelextrema(np.asarray(data.Timestamp),
+                              np.greater, order=200)[0]
+    data = data.drop(index=ts_spikes)   # Drop spikes in the timestamps.
+    data.reset_index(drop=True, inplace=True)
 
     # Also grab the offset between Arduino and DAQ
     offset = int(os.path.split(fpath)[1][-8:-4])
