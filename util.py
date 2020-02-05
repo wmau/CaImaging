@@ -12,6 +12,10 @@ from itertools import product
 from scipy.stats import norm
 import math
 import matplotlib.pyplot as plt
+import tkinter as tk
+tkroot = tk.Tk()
+tkroot.withdraw()
+from tkinter import filedialog
 
 def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
     """
@@ -49,7 +53,7 @@ def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
         raise NotImplementedError("backend {} not supported".format(backend))
 
 
-def concat_avis(path, pattern='behavCam*.avi',
+def concat_avis(path=None, pattern='behavCam*.avi',
                 fname='Merged.avi', fps=30, isColor=True):
     """
     Concatenates behavioral avi files for ezTrack.
@@ -67,6 +71,8 @@ def concat_avis(path, pattern='behavCam*.avi',
     final_clip_name: str, full file name of final clip.
     """
     # Get all files.
+    if path is None:
+        path = filedialog.askdirectory()
     files = natsorted(glob.glob(os.path.join(path, pattern)))
 
     # Get width and height.
@@ -416,7 +422,8 @@ def consecutive_dist(x, axis=0):
 
     :parameter
     ---
-    x: array-like, vector of values.
+    x: (N,2) array
+        X and Y coordinates
 
     :return
     ---
