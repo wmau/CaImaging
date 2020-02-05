@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 from scipy.signal import argrelextrema
+from util import find_closest
 
 # This is the default port from Will's desktop computer.
 # Change as needed to correspond to connected Arduino.
@@ -135,8 +136,25 @@ def clean_Arduino_output(fpath):
         print('Ignoring NaNs from these rows: ' + str(bad_frames))
         data.drop(data.index[bad_frames])
 
-    # Clean up data.
-    data = data[data['Frame'] > 0]  # Only take data when the DAQ was on.
+    # In an old Arduino sketch, the variable counting Miniscope frames
+    # was a signed int type, which had a maximum value of 32767. Once
+    # the frame count hit this value, the variable rolled over to negatives.
+    # This code snippet corrects that (without writing to the txt file).
+    # This should only affect data prior to Feb 6, 2020.
+
+    # First find the last frame closest to 32767, the limit for signed ints.
+    frame_limit = np.where(data.Frame == find_closest(data.Frame, 32767)[1])[0][-1]
+    inverted_sign_detected = data.Frame[frame_limit + 1] < 0
+
+    # If the next frame number is negative, correct the rest.
+    if inverted_sign_detected:
+        print('Negative frame numbers detected. Correcting...')
+        frames = data.Frame.copy()
+        corrected_frames =  frames[frame_limit + 1:] + (32767*2)
+        data.loc[frame_limit + 1:, 'Frame'] = corrected_frames
+
+    # The Arduino also sometimes incorrectly writes the wrong timestamp.
+    # If any huge spikes are detected, remove them.
     ts_spikes = argrelextrema(np.asarray(data.Timestamp),
                               np.greater, order=200)[0]
     data = data.drop(index=ts_spikes)   # Drop spikes in the timestamps.
