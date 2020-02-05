@@ -1,5 +1,6 @@
 import cv2
-from util import read_eztrack, ScrollPlot, disp_frame
+from util import read_eztrack, ScrollPlot, disp_frame, \
+    consecutive_dist
 import numpy as np
 import os
 import pandas as pd
@@ -252,14 +253,44 @@ class ManualCorrect:
         self.correct_position(int(np.round(event.xdata)))
 
 
+def convert_dlc_to_eztrack(h5_path):
+    df = pd.read_hdf(h5_path)
+    scorer = df.columns.levels[0][0]
+    body_parts = df.columns.levels[1]
 
+    if 'body' not in body_parts:
+        print('Warning! body is not one of the labeled body parts')
+        print('Proceeding as if the first labeled body part is the body.')
+    else:
+        body = 'body'
+
+    x = df[scorer][body]['x']
+    y = df[scorer][body]['y']
+    frames = [i for i in range(len(df[scorer][body]['x']))]
+    distances = consecutive_dist(np.asarray((x, y)).T)
+    distances = np.insert(distances, 0, 0)
+    new_df = {'x': x,
+              'y': y,
+              'frame': frames,
+              'distance': distances}
+
+    for part in body_parts:
+        if part != 'body':
+            x = df[scorer][part]['x']
+            y = df[scorer][part]['y']
+            distances = consecutive_dist(np.asarray((x, y)).T)
+            distances = np.insert(distances, 0, 0)
+
+            new_df[part + '_x'] = x
+            new_df[part + '_y'] = y
+            new_df[part + '_distance'] = distances
+
+    new_df = pd.DataFrame(new_df)
+
+    return new_df
 
 if __name__ == '__main__':
-    vid_fname = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12\Merged.avi'
-    eztrack_fpath = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12\Merged_LocationOutput.csv'
-    make_tracking_video(vid_fname, eztrack_fpath)
-    # Arduino_fpath = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12.3896 1428.txt'
-    # eztrack_fpath = r'D:\Projects\CircleTrack\Mouse1\12_20_2019\H14_M59_S12\Merged_LocationOutput.csv'
-    #eztrack_data = sync_Arduino_outputs(Arduino_fpath, eztrack_fpath)[0]
-    #clean_lick_detection(eztrack_data)
-    #find_water_ports_circletrack(eztrack_fpath)
+    folder = r'D:\Projects\CircleTrack\Mouse4\01_28_2020\H15_M27_S45'
+    fname = 'MergedDLC_resnet50_circletrackFeb4shuffle1_218500.h5'
+    path = os.path.join(folder, fname)
+    convert_dlc_to_eztrack(path)
