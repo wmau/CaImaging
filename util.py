@@ -675,10 +675,5 @@ def sync_cameras(timestamp_fpath, miniscope_cam=2, behav_cam=6):
 
 
 if __name__ == '__main__':
-    from CircleTrack.utils import grab_paths
-
-    folder = r'D:\Projects\CircleTrack\Mouse1\12_20_2019'
-    paths = grab_paths(folder)
-    ts = pd.read_csv(paths['timestamps'], sep="\s+")
-
-    sync_cameras(ts)
+    folder = r'D:\Projects\CircleTrack\Mouse4\01_30_2020\H11_M8_S19'
+    concat_avis(folder)

@@ -253,27 +253,54 @@ class ManualCorrect:
         self.correct_position(int(np.round(event.xdata)))
 
 
-def convert_dlc_to_eztrack(h5_path):
+def convert_dlc_to_eztrack(h5_path: str):
+    """
+    Converts DeepLabCut outputs into a format similar to ezTrack's.
+    This is motivated by most of my existing code already
+    accommodating ezTrack files.
+
+    :parameter
+    ---
+    h5_path: str
+        Path to the h5 file containing the output of DLC.
+
+    :return
+    ---
+    data: DataFrame
+        -x, y: Coordinates of body.
+        -distance: Distance traveled since last sample.
+        -frame: Frame number.
+        -*body_part*_x, *body_part*_y: If any other body
+            parts were labeled by DLC, their coordinates
+            will also be the body part name + _x, or _y.
+        -*body_part*_distance: Same for distance.
+    """
+    # Read the h5 file and get the keys.
     df = pd.read_hdf(h5_path)
     scorer = df.columns.levels[0][0]
     body_parts = df.columns.levels[1]
 
+    # If 'body' was not specified, assume the first body
+    # part is the body.
     if 'body' not in body_parts:
         print('Warning! body is not one of the labeled body parts')
         print('Proceeding as if the first labeled body part is the body.')
+        body = body_parts[0]
     else:
         body = 'body'
 
-    x = df[scorer][body]['x']
-    y = df[scorer][body]['y']
-    frames = [i for i in range(len(df[scorer][body]['x']))]
-    distances = consecutive_dist(np.asarray((x, y)).T)
-    distances = np.insert(distances, 0, 0)
+    # Extract the data. Start with body.
+    x = df[scorer][body]['x'] # x coordinate
+    y = df[scorer][body]['y'] # y coordinate
+    frames = [i for i in range(len(df[scorer][body]['x']))] # frame number
+    distances = consecutive_dist(np.asarray((x, y)).T) # distance from last sample
+    distances = np.insert(distances, 0, 0) # First distance is 0.
     new_df = {'x': x,
               'y': y,
               'frame': frames,
               'distance': distances}
 
+    # Then do the other body parts.
     for part in body_parts:
         if part != 'body':
             x = df[scorer][part]['x']
@@ -285,9 +312,10 @@ def convert_dlc_to_eztrack(h5_path):
             new_df[part + '_y'] = y
             new_df[part + '_distance'] = distances
 
-    new_df = pd.DataFrame(new_df)
+    # Turn into Dataframe. 
+    data = pd.DataFrame(new_df)
 
-    return new_df
+    return data
 
 if __name__ == '__main__':
     folder = r'D:\Projects\CircleTrack\Mouse4\01_28_2020\H15_M27_S45'
