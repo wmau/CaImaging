@@ -253,7 +253,7 @@ class ManualCorrect:
         self.correct_position(int(np.round(event.xdata)))
 
 
-def convert_dlc_to_eztrack(h5_path: str):
+def convert_dlc_to_eztrack(h5_path: str, save_path=None):
     """
     Converts DeepLabCut outputs into a format similar to ezTrack's.
     This is motivated by most of my existing code already
@@ -295,10 +295,10 @@ def convert_dlc_to_eztrack(h5_path: str):
     frames = [i for i in range(len(df[scorer][body]['x']))] # frame number
     distances = consecutive_dist(np.asarray((x, y)).T) # distance from last sample
     distances = np.insert(distances, 0, 0) # First distance is 0.
-    new_df = {'x': x,
-              'y': y,
-              'frame': frames,
-              'distance': distances}
+    new_df = {'X': x,
+              'Y': y,
+              'Frame': frames,
+              'Distance_px': distances}
 
     # Then do the other body parts.
     for part in body_parts:
@@ -308,17 +308,24 @@ def convert_dlc_to_eztrack(h5_path: str):
             distances = consecutive_dist(np.asarray((x, y)).T)
             distances = np.insert(distances, 0, 0)
 
-            new_df[part + '_x'] = x
-            new_df[part + '_y'] = y
-            new_df[part + '_distance'] = distances
+            new_df[part + '_X'] = x
+            new_df[part + '_Y'] = y
+            new_df[part + '_Distance'] = distances
 
-    # Turn into Dataframe. 
+    # Turn into Dataframe.
     data = pd.DataFrame(new_df)
+
+    # Save the csv.
+    if save_path is None:
+        base_path = os.path.splitext(h5_path)[0]
+        save_path = base_path + '_LocationOutput.csv'
+
+    data.to_csv(save_path)
 
     return data
 
 if __name__ == '__main__':
-    folder = r'D:\Projects\CircleTrack\Mouse4\01_28_2020\H15_M27_S45'
+    folder = r'D:\Projects\CircleTrack\Mouse4\01_29_2020\H15_M20_S48'
     fname = 'MergedDLC_resnet50_circletrackFeb4shuffle1_218500.h5'
     path = os.path.join(folder, fname)
     convert_dlc_to_eztrack(path)
