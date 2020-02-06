@@ -132,7 +132,7 @@ def read_eztrack(csv_fname):
     position = {'x': np.asarray(df['X']),    # x position
                 'y': np.asarray(df['Y']),    # y position
                 'frame': np.asarray(df['Frame']),           # Frame number
-                'distance': np.asarray(df['Distance_in'])} # Distance traveled since last sample
+                'distance': np.asarray(df['Distance_px'])} # Distance traveled since last sample
 
     return pd.DataFrame(position)
 
@@ -543,7 +543,7 @@ class ScrollPlot:
         # In cases where you need to read a video, do so during init.
         # current_position will set the starting frame.
         if vid_fpath is not None:
-            self.vid = cv2.VideoCapture(vid_fpath)
+            self.vid = cv2.VideoCapture(vid_fpath, cv2.CAP_FFMPEG)
             self.vid.set(1, self.current_position)
 
         # Make figure.
