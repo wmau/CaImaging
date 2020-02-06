@@ -134,7 +134,8 @@ def clean_Arduino_output(fpath):
         data.Frame = pd.to_numeric(data.Frame, errors='coerce')
         bad_frames = np.where(~np.isfinite(data.Frame))[0]
         print('Ignoring NaNs from these rows: ' + str(bad_frames))
-        data.drop(data.index[bad_frames])
+        data.dropna(inplace=True)
+        data.reset_index(drop=True, inplace=True)
 
     # In an old Arduino sketch, the variable counting Miniscope frames
     # was a signed int type, which had a maximum value of 32767. Once
@@ -148,7 +149,7 @@ def clean_Arduino_output(fpath):
 
     # If the next frame number is negative, correct the rest.
     if inverted_sign_detected:
-        print('Negative frame numbers detected. Correcting...')
+        print('Negative frame numbers detected. They have been corrected.')
         frames = data.Frame.copy()
         corrected_frames =  frames[frame_limit + 1:] + (32767*2)
         data.loc[frame_limit + 1:, 'Frame'] = corrected_frames
@@ -157,7 +158,7 @@ def clean_Arduino_output(fpath):
     # If any huge spikes are detected, remove them.
     ts_spikes = argrelextrema(np.asarray(data.Timestamp),
                               np.greater, order=200)[0]
-    data = data.drop(index=ts_spikes)   # Drop spikes in the timestamps.
+    data.drop(index=ts_spikes, inplace=True)    # Drop spikes in the timestamps.
     data.reset_index(drop=True, inplace=True)
 
     # Also grab the offset between Arduino and DAQ
