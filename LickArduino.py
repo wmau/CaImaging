@@ -1,7 +1,7 @@
 import serial.tools.list_ports
 from datetime import datetime
 import time
-import glob
+import threading
 import os
 import pandas as pd
 import numpy as np
@@ -13,6 +13,7 @@ from util import find_closest
 # You can find the appropriate port with the Arduino IDE when you
 # have an Arduino connected to the USB.
 default_port = 'COM3'
+terminate = ''
 
 def list_COMports():
     """
@@ -65,7 +66,7 @@ def initialize(com_port=default_port):
     return ser, t, clock_t
 
 def read_Arduino(com_port=default_port,
-                 directory=r'C:\Users\wm228\Documents\General\Workspace'):
+                 directory=r'D:/Projects/CircleTrack/Test'):
     """
     Read Arduino serial writes and saves to a txt file continuously.
     Arduino must be plugged in or you will error.
@@ -78,6 +79,7 @@ def read_Arduino(com_port=default_port,
 
     """
     # Initialize Arduino connection.
+    global terminate
     ser, t, clock_t = initialize(com_port)
 
     # File name building.
@@ -90,19 +92,53 @@ def read_Arduino(com_port=default_port,
         os.mkdir(os.path.join(directory, date_str))
 
     # Keeps going until you interrupt with Ctrl+C.
+    data_stream = []
     try:
+
         while True:
+            # if terminate == 'q':
+            #     print('success')
+            #     with open(fname, 'wb') as file:
+            #         for line in data_stream:
+            #             file.write(line)
+            #     ser.close()
+            #     break
+
             # Read serial port.
             data = ser.readline()
 
             # If there's incoming data, write line to txt file.
             if data:
                 with open(fname, 'ab+') as file:
+                #data_stream.append(data)
                     file.write(data)
 
-    except KeyboardInterrupt:
+    except:
+        #     pass
+        #     print('test')
+        #     with open(fname, 'wb') as file:
+        #         for line in data_stream:
+        #             file.write(line)
         ser.close()
-        pass
+
+                #file.close()
+            # finally:
+            #     with open(fname, 'wb') as file:
+            #         for line in data_stream:
+            #             file.write(line)
+
+
+def main():
+    global terminate
+
+    run_event = threading.Event()
+    run_event.set()
+
+    main_event = threading.Thread(target=read_Arduino)
+    main_event.start()
+
+    terminate = input()
+
 
 
 def clean_Arduino_output(fpath):
@@ -145,7 +181,10 @@ def clean_Arduino_output(fpath):
 
     # First find the last frame closest to 32767, the limit for signed ints.
     frame_limit = np.where(data.Frame == find_closest(data.Frame, 32767)[1])[0][-1]
-    inverted_sign_detected = data.Frame[frame_limit + 1] < 0
+    try:
+        inverted_sign_detected = data.Frame[frame_limit + 1] < 0
+    except:
+        inverted_sign_detected = False
 
     # If the next frame number is negative, correct the rest.
     if inverted_sign_detected:
@@ -167,6 +206,6 @@ def clean_Arduino_output(fpath):
     return data, offset
 
 if __name__ == '__main__':
-    #read_Arduino()
-    folder = r'D:\Projects\CircleTrack\Mouse2\12_18_2019'
-    fname = glob.glob(os.path.join(folder, 'H**_M**_S**.**** ****.txt'))[0]
+    read_Arduino()
+    #folder = r'D:\Projects\CircleTrack\Mouse2\12_18_2019'
+    #fname = glob.glob(os.path.join(folder, 'H**_M**_S**.**** ****.txt'))[0]
