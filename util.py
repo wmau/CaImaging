@@ -469,6 +469,25 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
 
 
 def find_closest(array, value, sorted=False):
+    """
+    Finds the closest value in an array to a specified input.
+
+    :parameters
+    ---
+    array: array-like
+        Array to search.
+
+    value: scalar
+        Any value.
+
+    :returns
+    ---
+    idx: int
+        Index of array that is closest to value.
+
+    array[idx]: anything
+        Closest value in the array.
+    """
     if sorted:
         idx = np.searchsorted(array, value, side="left")
         if idx > 0 and (idx == len(array) or math.fabs(value - array[idx - 1]) < math.fabs(value - array[idx])):
@@ -485,7 +504,8 @@ def get_data_paths(session_folder, pattern_dict):
     paths = {}
     for type, pattern in pattern_dict.items():
         match = glob.glob(os.path.join(session_folder, pattern))
-        assert len(match) < 2, ('Multiple possible files/folders detected.')
+        assert len(match) < 2, (f'Multiple possible files/folders detected. '
+                                f'{match}')
 
         try:
             paths[type] = match[0]
@@ -627,7 +647,7 @@ def disp_frame(ScrollObj):
     ScrollObj.last_position = int(ScrollObj.vid.get(7)) - 1
 
 
-def sync_cameras(timestamp_fpath, miniscope_cam=2, behav_cam=6):
+def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
     """map frames from Cam1 to Cam0 with nearest neighbour using the timestamp file from miniscope recordings.
 
     Parameters
@@ -646,6 +666,8 @@ def sync_cameras(timestamp_fpath, miniscope_cam=2, behav_cam=6):
     -------
     pd.DataFrame
         output dataframe. should contain field 'fmCam0' and 'fmCam1'
+        fmCam0 is the miniscope cam.
+        fmCam1 is the behavior cam.
     """
     ts = pd.read_csv(timestamp_fpath, sep="\s+")
     cam_change = np.abs(behav_cam - miniscope_cam)
@@ -675,5 +697,5 @@ def sync_cameras(timestamp_fpath, miniscope_cam=2, behav_cam=6):
 
 
 if __name__ == '__main__':
-    folder = r'D:\Projects\CircleTrack\Mouse4\01_30_2020\H11_M8_S19'
+    folder = r'D:\Projects\CircleTrack\Test\2020-Feb-11\H18_M8_S53'
     concat_avis(folder)
