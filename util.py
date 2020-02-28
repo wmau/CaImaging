@@ -416,7 +416,7 @@ def load_session(master_csv=r'D:\Projects\GTime\Data\GTime1.csv',
 
 
 
-def consecutive_dist(x, axis=0):
+def consecutive_dist(x, axis=0, zero_pad=False):
     """
     Calculates the the distance between consecutive points in a vector.
 
@@ -431,6 +431,9 @@ def consecutive_dist(x, axis=0):
     """
     delta = np.diff(x, axis=axis)
     dists = np.hypot(delta[:,0], delta[:,1])
+
+    if zero_pad:
+        dists = np.insert(dists, 0, 0)
 
     return dists
 
@@ -497,7 +500,7 @@ def find_closest(array, value, sorted=False):
     else:
         idx = (np.abs(array - value)).argmin()
 
-    return idx, array[idx]
+        return idx, array[idx]
 
 
 def get_data_paths(session_folder, pattern_dict):
@@ -696,6 +699,13 @@ def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
     return ts_map, ts
 
 
+def nan_array(size):
+    arr = np.empty(size)
+    arr.fill(np.nan)
+
+    return arr
+
+
 if __name__ == '__main__':
-    folder = r'D:\Projects\CircleTrack\Test\2020-Feb-11\H18_M8_S53'
+    folder = r'D:\Projects\CircleTrack\Test\02_19_2020\H17_M5_S8'
     concat_avis(folder)
