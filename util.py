@@ -673,15 +673,17 @@ def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
         fmCam1 is the behavior cam.
     """
     ts = pd.read_csv(timestamp_fpath, sep="\s+")
-    cam_change = np.abs(behav_cam - miniscope_cam)
+    #cam_change = behav_cam - miniscope_cam
 
-    ts["change_point"] = ts["camNum"].diff()
-    ts["ts_behav"] = np.where(ts["change_point"] == cam_change, ts["sysClock"], np.nan)
+    # ts["change_point"] = ts["camNum"].diff()
+    ts["ts_behav"] = np.where(ts["camNum"] == behav_cam,
+                              ts["sysClock"], np.nan)
     ts["ts_forward"] = ts["ts_behav"].fillna(method="ffill")
     ts["ts_backward"] = ts["ts_behav"].fillna(method="bfill")
     ts["diff_forward"] = np.absolute(ts["sysClock"] - ts["ts_forward"])
     ts["diff_backward"] = np.absolute(ts["sysClock"] - ts["ts_backward"])
-    ts["fm_behav"] = np.where(ts["change_point"] == cam_change, ts["frameNum"], np.nan)
+    ts["fm_behav"] = np.where(ts["camNum"] == behav_cam,
+                              ts["frameNum"], np.nan)
     ts["fm_forward"] = ts["fm_behav"].fillna(method="ffill")
     ts["fm_backward"] = ts["fm_behav"].fillna(method="bfill")
     ts["fmCam1"] = np.where(
