@@ -13,8 +13,9 @@ import numpy.matlib
 import matplotlib.pyplot as plt
 
 #### Custom imports start here ####
-from util import open_minian, get_transient_timestamps, distinct_colors, \
+from util import get_transient_timestamps, distinct_colors, \
     ordered_unique, find_dict_entries
+from Miniscope import open_minian
 import util
 from itertools import zip_longest
 

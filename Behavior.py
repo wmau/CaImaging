@@ -6,7 +6,10 @@ import os
 import pandas as pd
 from matplotlib.animation import FFMpegWriter
 import matplotlib.pyplot as plt
-
+import tkinter as tk
+tkroot = tk.Tk()
+tkroot.withdraw()
+from tkinter import filedialog
 
 def make_tracking_video(vid_path, csv_path, output_fname='Tracking.avi',
                         start=0, stop=None, fps=30):
@@ -323,6 +326,7 @@ def convert_dlc_to_eztrack(h5_path: str, save_path=None):
     data.to_csv(save_path)
 
     return data
+
 
 if __name__ == '__main__':
     folder = r'D:\Projects\CircleTrack\Mouse4\01_29_2020\H15_M20_S48'

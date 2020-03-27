@@ -9,6 +9,7 @@ import cv2
 import re
 from tifffile import imread, TiffFile
 import matplotlib.pyplot as plt
+import pandas as pd
 
 def load_videos(vpath,
                 pattern='msCam[0-9]+\.avi$',
@@ -147,8 +148,56 @@ def project_image(vpath, projection_type='min',
     fig_name = os.path.join(vpath, fname)
     fig.savefig(fig_name)
 
+    return proj
+
+
+def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
+    """
+    Opens minian outputs.
+
+    Parameters
+    ---
+    dpath: str, path to folder containing the minian outputs folder.
+    fname: str, name of the minian output folder.
+    backend: str, 'zarr' or 'netcdf'. 'netcdf' seems outdated.
+    chunks: ??
+    """
+    if backend is 'netcdf':
+        fname = fname + '.nc'
+        mpath = os.path.join(dpath, fname)
+        with xr.open_dataset(mpath) as ds:
+            dims = ds.dims
+        chunks = dict([(d, 'auto') for d in dims])
+        ds = xr.open_dataset(os.path.join(dpath, fname), chunks=chunks)
+
+        return ds
+
+    elif backend is 'zarr':
+        mpath = os.path.join(dpath, fname)
+        dslist = [xr.open_zarr(os.path.join(mpath, d))
+                  for d in os.listdir(mpath)
+                  if os.path.isdir(os.path.join(mpath, d))]
+        ds = xr.merge(dslist)
+        if chunks is 'auto':
+            chunks = dict([(d, 'auto') for d in ds.dims])
+
+        return ds.chunk(chunks)
+
+    else:
+        raise NotImplementedError("backend {} not supported".format(backend))
+
+
+def sync_preprocessed_data(folder, behavior_csv,
+                           critical_data=None):
+    minian_data = open_minian(folder)
+    behavior_data = pd.read_csv(behavior_csv)
+
+
+
 if __name__ == '__main__':
-    folder = r'D:\Projects\CircleTrack\MiniscopeMouse1\3_3_2020\H12_M1_S16'
-    data = load_videos(folder)
+    folder = r'C:\Users\wm228\OneDrive\Documents\Sinai\Projects\Circle track\M1\03_09_2020\H11_M38_S32'
+    data = sync_preprocessed_data(folder)
 
     pass
+
+

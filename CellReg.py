@@ -1,4 +1,5 @@
-from util import open_minian, dir_dict, find_dict_entries
+from util import dir_dict, find_dict_entries
+from Miniscope import open_minian
 from pathlib import Path
 import os
 from scipy.io import savemat

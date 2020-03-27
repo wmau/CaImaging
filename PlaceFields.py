@@ -1,4 +1,5 @@
-from util import open_minian, read_eztrack, dir_dict, find_dict_entries, load_session
+from util import read_eztrack, dir_dict, find_dict_entries, load_session
+from Miniscope import open_minian
 from util import synchronize_time_series as sync
 import numpy as np
 from Behavior import spatial_bin
