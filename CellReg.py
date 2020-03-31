@@ -271,7 +271,7 @@ def rearrange_neurons(map, neural_data):
     return rearranged
 
 
-def get_cellreg_path(mouse, dict_list=dir_dict(), animal_key = 'Animal',
+def get_cellreg_path(mouse, dict_list, animal_key = 'Animal',
                      cellreg_key='CellRegPath'):
     """
     Grabs the path containing CellRegResults folder from a dict
