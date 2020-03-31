@@ -1,5 +1,5 @@
 import cv2
-from util import read_eztrack, ScrollPlot, disp_frame, \
+from CaImaging.util import read_eztrack, ScrollPlot, disp_frame, \
     consecutive_dist
 import numpy as np
 import os

@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 from scipy.signal import argrelextrema
-from util import find_closest
+from CaImaging.util import find_closest
 
 # This is the default port from Will's desktop computer.
 # Change as needed to correspond to connected Arduino.

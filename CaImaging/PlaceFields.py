@@ -1,9 +1,6 @@
-from util import read_eztrack, dir_dict, find_dict_entries, load_session
-from Miniscope import open_minian
-from util import synchronize_time_series as sync
+from CaImaging.util import load_session
 import numpy as np
-from Behavior import spatial_bin
-import os
+from CaImaging.Behavior import spatial_bin
 import matplotlib.pyplot as plt
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams.update({'font.size': 12})

@@ -10,7 +10,7 @@ import math
 import matplotlib.pyplot as plt
 import tkinter as tk
 
-from Miniscope import open_minian
+from CaImaging.Miniscope import open_minian
 
 tkroot = tk.Tk()
 tkroot.withdraw()

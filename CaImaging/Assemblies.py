@@ -13,14 +13,12 @@ import numpy.matlib
 import matplotlib.pyplot as plt
 
 #### Custom imports start here ####
-from util import get_transient_timestamps, distinct_colors, \
-    ordered_unique, find_dict_entries
-from Miniscope import open_minian
-import util
+from CaImaging.Miniscope import open_minian
+from CaImaging import util
 from itertools import zip_longest
 
 
-from CellReg import CellRegObj, trim_map, rearrange_neurons, get_cellreg_path
+from CaImaging.CellReg import CellRegObj, trim_map, rearrange_neurons, get_cellreg_path
 from scipy.ndimage import gaussian_filter1d
 
 

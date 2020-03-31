@@ -1,5 +1,5 @@
-from util import dir_dict, find_dict_entries
-from Miniscope import open_minian
+from CaImaging.util import dir_dict, find_dict_entries
+from CaImaging.Miniscope import open_minian
 from pathlib import Path
 import os
 from scipy.io import savemat
