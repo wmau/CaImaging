@@ -665,6 +665,54 @@ def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
     return ts_map, ts
 
 
+def sync_data(csv_path, minian_path, timestamp_path,
+              miniscope_cam=6, behav_cam=1):
+    """
+    Synchronizes minian and behavior time series.
+
+    :parameters
+    ---
+    csv_path: str
+        Full file path to a csv from ezTrack.
+
+    minian_path: str
+        Full file path to the folder containing the minian folder.
+
+    timestamp_path: str
+        Full file path to the timestamp.dat file.
+
+    miniscope_cam: int
+        Camera number corresponding to the miniscope.
+
+    behav_cam: int
+        Camera nubmer corresponding to the behavior camera.
+
+    :return
+    ---
+    synced_behavior: DataFrame
+        The behavior csv, except downsampled and reordered
+        according to the frames present in minian.
+
+    """
+    # Open behavior csv (from ezTrack) and minian files.
+    behavior = pd.read_csv(csv_path)
+    minian = open_minian(minian_path)
+
+    # Match up timestamps from minian and behavior. Use minian
+    # as the reference.
+    ts_map, ts = sync_cameras(timestamp_path,
+                              miniscope_cam=miniscope_cam,
+                              behav_cam=behav_cam)
+    miniscope_frames = np.asarray(minian.C.frame)
+    behavior_frames = ts_map.fmCam1.iloc[miniscope_frames]
+
+    # Rearrange all the behavior frames.
+    synced_behavior = behavior.iloc[behavior_frames]
+
+    return synced_behavior
+
+
+
 def nan_array(size):
     arr = np.empty(size)
     arr.fill(np.nan)
@@ -673,5 +721,7 @@ def nan_array(size):
 
 
 if __name__ == '__main__':
-    folder = r'D:\Projects\CircleTrack\Test\02_19_2020\H17_M5_S8'
-    concat_avis(folder)
+    folder = r'Z:\Will\Susie\TS29-0\S10'
+    minian_folder = r'Y:\Susie\2020\epilepsy_imaging_analysis\LTEEG\ByAnimal\TS29-0\S10'
+
+    csv_path = os.path.join()
