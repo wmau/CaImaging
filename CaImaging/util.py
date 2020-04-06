@@ -708,6 +708,7 @@ def sync_data(csv_path, minian_path, timestamp_path,
 
     # Rearrange all the behavior frames.
     synced_behavior = behavior.iloc[behavior_frames]
+    synced_behavior.reset_index(drop=True, inplace=True)
 
     return synced_behavior, minian, behavior
 
