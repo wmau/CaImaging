@@ -164,7 +164,7 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
     # Sum the number of "spikes" per bin.
     summed = [np.sum(bin > 0, axis=1) for bin in binned]
 
-
+    return np.vstack(summed).T
 
 
 def get_transient_timestamps(neural_data, std_thresh=3):
