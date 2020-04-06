@@ -709,7 +709,7 @@ def sync_data(csv_path, minian_path, timestamp_path,
     # Rearrange all the behavior frames.
     synced_behavior = behavior.iloc[behavior_frames]
 
-    return synced_behavior
+    return synced_behavior, minian, behavior
 
 
 
