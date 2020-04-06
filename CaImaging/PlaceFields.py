@@ -106,11 +106,3 @@ class PlaceFields():
 
 if __name__ == '__main__':
     mouse = 'G132'
-    session = 4
-
-    data = load_session(**{'Animal': mouse, 'Session': str(session)})[0]
-
-
-    P = PlaceFields(data['Behavior']['x'], data['Behavior']['y'],
-                    data['NeuralData'])
-    P.plot_dots(1)

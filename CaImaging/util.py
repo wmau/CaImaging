@@ -9,6 +9,7 @@ from csv import DictReader
 import math
 import matplotlib.pyplot as plt
 import tkinter as tk
+from scipy.stats import binned_statistic
 
 from CaImaging.Miniscope import open_minian
 
@@ -101,48 +102,37 @@ def read_eztrack(csv_fname):
     return pd.DataFrame(position)
 
 
-def synchronize_time_series(position, neural, behav_fps=30, neural_fps=15):
+def make_bins(data, samples_per_bin, axis=1):
+    try:
+        length = data.shape[axis]
+    except:
+        length = data.shape[0]
+
+    bins = np.arange(samples_per_bin, length, samples_per_bin)
+
+    return bins.astype(int)
+
+
+def bin_transients(data, bin_size_in_seconds, fps=15):
     """
-    Synchronizes behavior and neural time series by interpolating behavior.
-
-    :parameters
-    ---
-    position: dict, output from read_ezTrack().
-    neural: (neuron, t) array, any time series output from minian (e.g., C, S).
-    behav_fps: float, sampling rate of behavior video.
-    neural_fps: float, sampling rate of minian data.
-
-    :return
-    ---
-    position: dict, interpolated data based on neural sampling rate.
-
+    
+    :param data:
+    :param bin_size_in_seconds:
+    :param fps:
+    :return:
     """
-    # Get number of frames in each video.
-    neural_nframes = neural.shape[1]
-    behav_nframes = len(position['frame'])
+    if type(data) is not np.ndarray:
+        data = np.asarray(data)
+    data = np.round(data, 3)
 
-    # Create time vectors.
-    neural_t = np.arange(0, neural_nframes/neural_fps, 1/neural_fps)
-    behav_t = np.arange(0, behav_nframes/behav_fps, 1/behav_fps)
+    bins = make_bins(data, bin_size_in_seconds*fps)
 
-    # Interpolate.
-    position['x'] = np.interp(neural_t, behav_t, position['x'])
-    position['y'] = np.interp(neural_t, behav_t, position['y'])
-    position['frame'] = np.interp(neural_t, behav_t, position['frame'])
+    binned = np.split(data, bins, axis=1)
 
-    # Normalize.
-    position['x'] = position['x'] - min(position['x'])
-    position['y'] = position['y'] - min(position['y'])
+    summed = [np.sum(bin > 0, axis=1) for bin in binned]
 
-    # Compute distance at each consecutive point.
-    pos_diff = np.diff(position['x']), np.diff(position['y'])
-    position['distance'] = np.hypot(pos_diff[0], pos_diff[1])
+    return summed
 
-    # Compute velocity by dividing by 1/fps.
-    position['velocity'] = \
-        np.concatenate(([0], position['distance']*min((neural_fps, behav_fps))))
-
-    return position
 
 
 def get_transient_timestamps(neural_data, std_thresh=3):
@@ -722,7 +712,6 @@ def nan_array(size):
 
 
 if __name__ == '__main__':
-    folder = r'Z:\Will\Susie\TS29-0\S10'
-    minian_folder = r'Y:\Susie\2020\epilepsy_imaging_analysis\LTEEG\ByAnimal\TS29-0\S10'
-
-    csv_path = os.path.join()
+    folder = r'Z:\Will\SEFL\pp2\Day0_Baseline\4_14_19'
+    data = open_minian(folder)
+    bin_transients(data.S, 30)
