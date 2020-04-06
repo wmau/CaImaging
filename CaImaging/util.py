@@ -103,6 +103,21 @@ def read_eztrack(csv_fname):
 
 
 def make_bins(data, samples_per_bin, axis=1):
+    """
+    Make bins determined by how many samples per bin.
+
+    :parameters
+    ---
+    data: array-like
+        Data you want to bin.
+
+    samples_per_bin: int
+        Number of values per bin.
+
+    axis: int
+        Axis you want to bin across.
+
+    """
     try:
         length = data.shape[axis]
     except:
@@ -115,23 +130,40 @@ def make_bins(data, samples_per_bin, axis=1):
 
 def bin_transients(data, bin_size_in_seconds, fps=15):
     """
-    
-    :param data:
-    :param bin_size_in_seconds:
-    :param fps:
-    :return:
+    Bin data then sum the number of "spikes" (deconvolved S matrix)
+    within each bin.
+
+    :parameters
+    ---
+    data: xarray, or numpy array
+        Minian output (S matrix, usually).
+
+    bin_size_in_seconds: int
+        How big you want each bin, in seconds.
+
+    fps: int
+        Sampling rate (default takes into account 2x downsampling
+        from minian).
+
+
+    :return
+    ---
+    summed: (cell, bin) array
+        Number of spikes per cell for each bin.
+
     """
+    # Convert input into
     if type(data) is not np.ndarray:
         data = np.asarray(data)
     data = np.round(data, 3)
 
+    # Group data into bins.
     bins = make_bins(data, bin_size_in_seconds*fps)
-
     binned = np.split(data, bins, axis=1)
 
+    # Sum the number of "spikes" per bin.
     summed = [np.sum(bin > 0, axis=1) for bin in binned]
 
-    return summed
 
 
 
@@ -323,50 +355,6 @@ def find_dict_entries(dict_list, mode='and', **kwargs):
         TypeError('Mode not supported')
 
     return entries
-
-
-def load_session(master_csv=r'D:\Projects\GTime\Data\GTime1.csv',
-                 data_key='DataPath', behavior_key='BehaviorCSV',
-                 minian_attr='S', **kwargs):
-    """
-    Loads and synchronizes behavior and imaging. Specify which
-    sessions to load in the kwargs dict (which is fed into find_dict_entries).
-
-    :parameters
-    ---
-    master_csv: str
-        Path to the master csv that contains metadata for all sessions.
-
-    data_key: str
-        The dict key (csv column title) corresponding to minian path.
-
-    behavior_key: str
-        Dict key corresponding to behavior CSV.
-
-    minian_attr: str
-        Data from minian output that you want to load in.
-
-    kwargs: dict
-        Key, value pairings specifying which sessions you want to load.
-        Example: {'Animal': 'G132', 'Notes': 'AM'}
-
-    """
-    # Get sessions.
-    dict_list = dir_dict(master_csv)
-    sessions = find_dict_entries(dict_list, **kwargs)
-
-    for session in sessions:
-        # Load neural data.
-        session['NeuralData'] = \
-            np.asarray(getattr(open_minian(session[data_key]),
-                               minian_attr))
-
-        # Load and sync behavior.
-        session['Behavior'] = \
-            synchronize_time_series(read_eztrack(session[behavior_key]),
-                                    session['NeuralData'])
-
-    return sessions
 
 
 
