@@ -332,7 +332,7 @@ def lapsed_activation(template_data, lapsed_data,  method='ica',
 
     :parameters
     ---
-    map: (neurons, sessions) array.
+    cell_map: (neurons, sessions) array.
         Mapping of neuron IDs across sessions.
 
     template_data: (neurons, time) array.
@@ -500,7 +500,7 @@ if __name__ == '__main__':
     s2 = 2
     mouse = 'G132'
     dict_list = util.dir_dict()
-    entries = util.find_dict_entries(dict_list, **{'Animal': mouse})
+    entries = util.filter_sessions(dict_list, **{'Animal': mouse})
     cellregpath = get_cellreg_path(mouse)
 
     minian_outputs = []
@@ -510,10 +510,10 @@ if __name__ == '__main__':
     C = CellRegObj(cellregpath)
 
 
-    # map = trim_map(C.map, [0,1], was_detected_everyday=True)
+    # cell_map = trim_map(C.cell_map, [0,1], was_detected_everyday=True)
     # template = np.asarray(minian1.S)
-    # lapsed = rearrange_neurons(map[:,1], [np.asarray(minian2.S)])
-    # template = rearrange_neurons(map[:,0], [template])
+    # lapsed = rearrange_neurons(cell_map[:,1], [np.asarray(minian2.S)])
+    # template = rearrange_neurons(cell_map[:,0], [template])
     #
     # lapsed_activation(template[0], [lapsed])
 

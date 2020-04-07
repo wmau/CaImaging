@@ -1,4 +1,4 @@
-from CaImaging.util import dir_dict, find_dict_entries
+from CaImaging.util import filter_sessions
 from CaImaging.Miniscope import open_minian
 from pathlib import Path
 import os
@@ -7,6 +7,7 @@ import numpy as np
 import glob
 import h5py
 import pickle
+import pandas as pd
 
 
 class SpatialFootprints():
@@ -82,31 +83,29 @@ class CellRegObj:
 
         """
         self.path = path
-
+        self.sessions = self.get_sessions()
         try:
-            self.map = self.load_cellreg_results()
+            self.map = load_cellreg_results(self.path)
         except:
             self.data, self.file  = self.read_cellreg_output()
             self.compile_cellreg_data()
-            self.map = self.load_cellreg_results()
+            self.map = load_cellreg_results(self.path)
 
-    def load_cellreg_results(self, mode='map'):
+    def get_sessions(self):
         """
-        After having already running CellRegObj, load the saved pkl file.
+        Get sessions by going up a level on the path and searching for
+        mat files.
 
+        :return
+        ---
+        sessions: list
+            Session names.
         """
-        # Get file name based on mode.
-        file_dict = {'map': 'CellRegResults.pkl',
-                     'footprints': 'CellRegFootprints.pkl',
-                     'centroids': 'CellRegCentroids.pkl',
-                     }
-        fname = os.path.join(self.path, file_dict[mode])
+        mat_files = glob.glob(os.path.join(os.path.split(self.path)[0], '*.mat'))
+        sessions = [os.path.split(os.path.splitext(i)[0])[-1] for i in mat_files]
 
-        # Open pkl file.
-        with open(fname, 'rb') as file:
-            data = pickle.load(file)
+        return sessions
 
-        return data
 
     def read_cellreg_output(self):
         """
@@ -131,6 +130,11 @@ class CellRegObj:
 
         # Matlab indexes starting from 1. Correct this.
         match_map = cell_to_index_map - 1
+
+        # Convert to DataFrame and make the column names the sessions.
+        assert match_map.shape[1] == len(self.sessions), "Sessions don't match."
+        match_map = pd.DataFrame(match_map)
+        match_map.columns = self.sessions
 
         return match_map.astype(int)
 
@@ -159,37 +163,68 @@ class CellRegObj:
 
     def compile_cellreg_data(self):
         # Gets registration information. So far, this consists of the
-        # cell to index map, centroids, and spatial footprints.
+        # cell to index cell_map, centroids, and spatial footprints.
         match_map = self.process_registration_map()
         centroids = self.process_centroids()
         footprints = self.process_spatial_footprints()
 
         filename =\
-            os.path.join(self.path,'CellRegResults.pkl')
+            os.path.join(self.path,'CellRegResults.csv')
         filename_footprints = \
             os.path.join(self.path,'CellRegFootprints.pkl')
         filename_centroids = \
             os.path.join(self.path, 'CellRegCentroids.pkl')
 
-        with open(filename, 'wb') as output:
-            pickle.dump(match_map, output, protocol=4)
+        match_map.to_csv(filename)
         with open(filename_footprints, 'wb') as output:
             pickle.dump(footprints, output, protocol=4)
         with open(filename_centroids, 'wb') as output:
             pickle.dump(centroids, output, protocol=4)
 
 
-def trim_map(map, cols, detected='everyday'):
+def load_cellreg_results(path, mode='cell_map'):
+    """
+    After having already running CellRegObj, load the saved pkl file.
+
+    """
+    # Get file name based on mode.
+    file_dict = {'cell_map': 'CellRegResults.csv',
+                 'footprints': 'CellRegFootprints.pkl',
+                 'centroids': 'CellRegCentroids.pkl',
+                 }
+    fname = os.path.join(path, file_dict[mode])
+
+    # Open pkl file.
+    if mode in ['footprints', 'centroids']:
+        with open(fname, 'rb') as file:
+            data = pickle.load(file)
+    elif mode == 'cell_map':
+        data = pd.read_csv(fname)
+    else:
+        raise KeyError(f'{mode} not supported. Use cell_map, footprints, '
+                       f'or centroids.')
+
+    return data
+
+
+def get_cellmap_columns(cell_map, cols):
+    sessions = []
+    for col in cols:
+        sessions.extend([c for c in cell_map.columns if col in c])
+
+    return sessions
+
+def trim_map(cell_map, cols, detected='everyday'):
     """
     Eliminates columns in the neuron mapping array.
 
     :parameters
     ---
-    map: (neuron, session) array
+    cell_map: (neuron, session) array
         Neuron mappings.
 
     cols: list-like
-        Columns of map to keep.
+        Columns of cell_map to keep.
 
     detected: str
         'everyday': keeps only the neurons that were detected on
@@ -205,7 +240,8 @@ def trim_map(map, cols, detected='everyday'):
 
     """
     # Take only specified columns.
-    trimmed_map = map[:,cols]
+    sessions = get_cellmap_columns(cell_map, cols)
+    trimmed_map = cell_map.loc[:, sessions]
 
     # Eliminate neurons that were not detected on every session.
     if detected == 'everyday':
@@ -215,53 +251,54 @@ def trim_map(map, cols, detected='everyday'):
     elif detected == 'first_day':
         neurons_detected = trimmed_map[:,0] > -1
     else:
-        TypeError('Invalid value for detected')
+        raise TypeError('Invalid value for detected')
 
-    trimmed_map = trimmed_map[neurons_detected,:]
+    trimmed_map = trimmed_map.loc[neurons_detected,:]
 
     return trimmed_map
 
 
-def rearrange_neurons(map, neural_data):
+def rearrange_neurons(cell_map, neural_data):
     """
     Rearranges (neuron, time) arrays by rows to match the mapping.
 
     :parameters
     ---
-    map: (neuron, session) array
+    cell_map: (neuron, session) array
         Neuron mappings.
 
     neural_data: list of (neuron, time) arrays
         Neural data (e.g., S). List must be in same order as the
-        columns in map.
+        columns in cell_map.
 
     """
     # Handles cases where only one session was fed in.
-    if map.ndim == 1:
-        map = np.expand_dims(map, 1)
+    cell_map = np.asarray(cell_map) if type(cell_map) is pd.DataFrame else cell_map
+    if cell_map.ndim == 1:
+        cell_map = np.expand_dims(cell_map, 1)
     neural_data = [neural_data] if not isinstance(neural_data, list) else neural_data
 
-    if not -1 in map:
+    if not -1 in cell_map:
         # Do a simple rearrangement of rows based on mappings.
         rearranged = []
         for n, session in enumerate(neural_data):
-            rearranged.append(session[map[:,n]])
+            rearranged.append(session[cell_map[:, n]])
 
     else:
-        # Catches cases where -1s (non-matched neurons) are in map.
-        # In this case, iterate through each map column (session)
+        # Catches cases where -1s (non-matched neurons) are in cell_map.
+        # In this case, iterate through each cell_map column (session)
         # and then iterate through each neuron. Grab it from neural_data
         # if it exists, otherwise, fill it with zeros.
-        print('Unmatched neurons detected in map. Padding with zeros')
+        print('Unmatched neurons detected in cell_map. Padding with zeros')
         rearranged = []
 
         for n, session in enumerate(neural_data):
             # Assume neuron is not active, fill with zeros.
-            rearranged_session = np.zeros((map.shape[0], session.shape[1]))
+            rearranged_session = np.zeros((cell_map.shape[0], session.shape[1]))
 
-            # Be sure to only grab neurons if map value is > -1.
+            # Be sure to only grab neurons if cell_map value is > -1.
             # Otherwise, it will take the last neuron (-1).
-            for m, neuron in enumerate(map[:,n]):
+            for m, neuron in enumerate(cell_map[:, n]):
                 if neuron > -1:
                     rearranged_session[m] = session[neuron]
 
@@ -271,7 +308,7 @@ def rearrange_neurons(map, neural_data):
     return rearranged
 
 
-def get_cellreg_path(mouse, dict_list, animal_key = 'Animal',
+def get_cellreg_path(cell_map, mouse, animal_key='Mouse',
                      cellreg_key='CellRegPath'):
     """
     Grabs the path containing CellRegResults folder from a dict
@@ -298,10 +335,18 @@ def get_cellreg_path(mouse, dict_list, animal_key = 'Animal',
         Path to CellRegResults folder.
 
     """
-    entries = find_dict_entries(dict_list, **{animal_key: mouse})
-    path = entries[0][cellreg_key]
+    entries = filter_sessions(cell_map, key=animal_key, keywords=mouse)
+    path = entries.loc[0, cellreg_key]
 
     return path
 
+
+def plot_footprints(cell_map, cols, neurons=range(10)):
+    if isinstance(neurons, int):
+        neurons = [neurons]
+
+    sessions = get_cellmap_columns(cell_map, cols)
+
+
 if __name__ == '__main__':
-    get_cellreg_path('G132')
+    CellRegObj(r'Z:\\Will\\SEFL\\pp1\\SpatialFootprints\\CellRegResults')

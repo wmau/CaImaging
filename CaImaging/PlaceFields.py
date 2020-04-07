@@ -54,7 +54,7 @@ class PlaceFields():
 
     def make_occupancy_map(self, bin_size_cm=20, plot=True, ax=None):
         """
-        Makes the occupancy heat map of the animal.
+        Makes the occupancy heat cell_map of the animal.
 
         :parameters
         ---
