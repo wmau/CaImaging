@@ -284,77 +284,29 @@ def ordered_unique(sequence):
     return [x for x in sequence if not (x in seen or seen_add(x))]
 
 
-def dir_dict(csv_path=r'D:\Projects\GTime\Data\GTime1.csv'):
+def filter_sessions(df, key, keywords, mode='all'):
     """
-    Converts a csv containing session metadata into a dict. Useful
-    for compiling all the paths for a project. csv should have
-    some number of columns with a label.
 
-    :parameter
-    ---
-    csv_path: str
-        Path to csv. Default is the GTime1.csv on Will's desktop.
-
-    :return
-    ---
-    dict_list: list of dicts
-        List of dictionaries corresponding to the number of rows in
-        the csv. Each entry in the list has keys (columns) filled in
-        with the value for each row in the csv.
-
-    """
-    dict_list = []
-    with open(csv_path, 'r') as file:
-        csv_file = DictReader(file)
-
-        for entry in csv_file:
-            dict_list.append({k: v for k, v in zip(entry.keys(),
-                                                   entry.values())})
-
-    return dict_list
-
-
-def find_dict_entries(dict_list, mode='and', **kwargs):
-    """
-    Finds the dictionary entry (or entries) that corresponds to
-    the key and value in kwargs
-
-    To get all AM entries in G132:
-    find_dict_entries(dict_list, mode='and', **{'Animal: 'G132', 'Notes':'AM'})
-
-    Replacing the above mode with 'or' gets all AM entries
-    or all G132 entries.
 
     :parameters
     ---
-    dict_list: list of dicts
-        From dir_dict()
 
-    mode: str ('and', 'or')
-        Whether to intersect or union the entries that match
-        the kwargs dict.
-
-    kwargs: dict with any number of keys, values
-        The function will match dict_list entries to these pairings.
-
-    :return
-    ---
-    entries: list of dicts
-        Entries that satisfy key=value.
     """
-    if mode == 'and':
-        for key, value in kwargs.items():
-            dict_list = [d for d in dict_list if d[key] == value]
+    if type(key) is not list:
+        key = [key]
+    if type(keywords) is not list:
+        keywords = [keywords]
 
-        entries = dict_list
-    elif mode == 'or':
-        entries = []
-        for key, value in kwargs.items():
-            entries.extend(d for d in dict_list if d[key] == value and d not in entries)
+    if mode == 'all':
+        filtered = df[df[key].isin(keywords).all(axis=1)]
+
+    elif mode == 'any':
+        filtered = df[df[key].isin(keywords).any(axis=1)]
+
     else:
-        TypeError('Mode not supported')
+        raise ValueError(f'{mode} not supported. Use any or all.')
 
-    return entries
+    return filtered
 
 
 
@@ -593,7 +545,7 @@ def disp_frame(ScrollObj):
 
 
 def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
-    """map frames from Cam1 to Cam0 with nearest neighbour using the timestamp file from miniscope recordings.
+    """cell_map frames from Cam1 to Cam0 with nearest neighbour using the timestamp file from miniscope recordings.
 
     Parameters
     ----------
