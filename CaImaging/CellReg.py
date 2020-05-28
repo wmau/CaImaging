@@ -128,15 +128,17 @@ class CellRegObj:
         # matrix. Transpose it back.
         cell_to_index_map = self.data['cell_to_index_map'].value.T
 
-        # Matlab indexes starting from 1. Correct this.
+        # Matlab indexes starting from 1. Correct this for Python.
+        # Then NaN out the unmatched cells.
         match_map = cell_to_index_map - 1
+        match_map[match_map == -1] = np.nan
 
         # Convert to DataFrame and make the column names the sessions.
         assert match_map.shape[1] == len(self.sessions), "Sessions don't match."
         match_map = pd.DataFrame(match_map)
         match_map.columns = self.sessions
 
-        return match_map.astype(int)
+        return match_map.astype('Int64')
 
     def process_spatial_footprints(self):
         # Get the spatial footprints after translations.
@@ -208,9 +210,33 @@ def load_cellreg_results(path, mode='cell_map'):
 
 
 def get_cellmap_columns(cell_map, cols):
+    """
+    Gets the exact column name of the cell_map DataFrame given a
+    partial str.
+
+    :parameters
+    ---
+    cell_map: (neuron, session) DataFrame
+        Neuron mappings from CellRegObj.
+
+    cols: list or list-like of strs
+        Strings corresponding to the session names you want.
+
+    :return
+    ---
+    sessions: list of strs
+        Strings of the actual session names.
+
+    """
+    if type(cols) is not list:
+        cols = [cols]
+
+    cols = [c.lower() for c in cols]
+
     sessions = []
     for col in cols:
-        sessions.extend([c for c in cell_map.columns if col in c])
+        sessions.extend([c for c in cell_map.columns
+                         if col in c.lower()])
 
     return sessions
 
@@ -220,7 +246,7 @@ def trim_map(cell_map, cols, detected='everyday'):
 
     :parameters
     ---
-    cell_map: (neuron, session) array
+    cell_map: (neuron, session) DataFrame
         Neuron mappings.
 
     cols: list-like
@@ -245,11 +271,11 @@ def trim_map(cell_map, cols, detected='everyday'):
 
     # Eliminate neurons that were not detected on every session.
     if detected == 'everyday':
-        neurons_detected = (trimmed_map > -1).all(axis=1)
+        neurons_detected = (~trimmed_map.isnull()).all(axis=1)
     elif detected == 'either_day':
-        neurons_detected = (trimmed_map > -1).any(axis=1)
+        neurons_detected = (~trimmed_map.isnull()).any(axis=1)
     elif detected == 'first_day':
-        neurons_detected = trimmed_map[:,0] > -1
+        neurons_detected = ~trimmed_map[trimmed_map.columns[0]].isnull()
     else:
         raise TypeError('Invalid value for detected')
 
@@ -273,7 +299,9 @@ def rearrange_neurons(cell_map, neural_data):
 
     """
     # Handles cases where only one session was fed in.
-    cell_map = np.asarray(cell_map) if type(cell_map) is pd.DataFrame else cell_map
+    cell_map = np.asarray(cell_map, dtype=int) \
+        if type(cell_map) in [pd.DataFrame, pd.Series] \
+        else cell_map
     if cell_map.ndim == 1:
         cell_map = np.expand_dims(cell_map, 1)
     neural_data = [neural_data] if not isinstance(neural_data, list) else neural_data
@@ -336,9 +364,11 @@ def get_cellreg_path(cell_map, mouse, animal_key='Mouse',
 
     """
     entries = filter_sessions(cell_map, key=animal_key, keywords=mouse)
-    path = entries.loc[0, cellreg_key]
+    path = entries[cellreg_key].iloc[0]
 
     return path
+
+
 
 
 def plot_footprints(cell_map, cols, neurons=range(10)):
@@ -348,5 +378,4 @@ def plot_footprints(cell_map, cols, neurons=range(10)):
     sessions = get_cellmap_columns(cell_map, cols)
 
 
-if __name__ == '__main__':
     CellRegObj(r'Z:\\Will\\SEFL\\pp1\\SpatialFootprints\\CellRegResults')
