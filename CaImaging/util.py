@@ -10,6 +10,8 @@ import math
 import matplotlib.pyplot as plt
 import tkinter as tk
 from scipy.stats import binned_statistic
+import xarray as xr
+from itertools import zip_longest
 
 from CaImaging.Miniscope import open_minian
 
@@ -130,7 +132,7 @@ def make_bins(data, samples_per_bin, axis=1):
 
 def bin_transients(data, bin_size_in_seconds, fps=15):
     """
-    Bin data then sum the number of "spikes" (deconvolved S matrix)
+    Bin data then sum the number of "S" (deconvolved S matrix)
     within each bin.
 
     :parameters
@@ -149,7 +151,7 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
     :return
     ---
     summed: (cell, bin) array
-        Number of spikes per cell for each bin.
+        Number of S per cell for each bin.
 
     """
     # Convert input into
@@ -161,13 +163,14 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
     bins = make_bins(data, bin_size_in_seconds*fps)
     binned = np.split(data, bins, axis=1)
 
-    # Sum the number of "spikes" per bin.
+    # Sum the number of "S" per bin.
     summed = [np.sum(bin > 0, axis=1) for bin in binned]
 
     return np.vstack(summed).T
 
 
-def get_transient_timestamps(neural_data, std_thresh=3):
+def get_transient_timestamps(neural_data, do_zscore=True,
+                             std_thresh=3):
     """
     Converts an array of continuous time series (e.g., traces or S)
     into lists of timestamps where activity exceeds some threshold.
@@ -191,9 +194,12 @@ def get_transient_timestamps(neural_data, std_thresh=3):
 
     """
     # Compute thresholds for each neuron.
-    stds = np.std(neural_data, axis=1)
-    means = np.mean(neural_data, axis=1)
-    thresh = means + std_thresh*stds
+    if do_zscore:
+        stds = np.std(neural_data, axis=1)
+        means = np.mean(neural_data, axis=1)
+        thresh = means + std_thresh*stds
+    else:
+        thresh = np.repeat(std_thresh, neural_data.shape[0])
 
     # Get event times and magnitudes.
     bool_arr = neural_data > np.tile(thresh,[neural_data.shape[1], 1]).T
@@ -284,12 +290,33 @@ def ordered_unique(sequence):
     return [x for x in sequence if not (x in seen or seen_add(x))]
 
 
-def filter_sessions(df, key, keywords, mode='all'):
+def filter_sessions(session, key, keywords, mode='all'):
     """
-
+    Filters sessions based on keywords.
 
     :parameters
     ---
+    session: DataFrame
+        Session metadata.
+
+    key: list of str
+        List of column names (e.g., 'Mouse' or 'Session').
+
+    keywords: list of str
+        List of words under a column (e.g., 'traumapost')
+
+    mode: str, 'all' or 'any'
+        Returns filtered DataFrame depending on whether any or all
+        columns need to have matching keywords. For example, if
+        mode = 'all', both the mouse name and the session name need
+        to be in the keywords list. If mode = 'any', the mouse could
+        be in the keywords list but would also include all the
+        sessions, not only the session in the keyword list.
+
+    :return
+    ---
+    filtered: DataFrame
+        Filtered session list.
 
     """
     if type(key) is not list:
@@ -297,11 +324,13 @@ def filter_sessions(df, key, keywords, mode='all'):
     if type(keywords) is not list:
         keywords = [keywords]
 
+    keywords = [keyword.lower() for keyword in keywords]
+
     if mode == 'all':
-        filtered = df[df[key].isin(keywords).all(axis=1)]
+        filtered = session[session[key].isin(keywords).all(axis=1)]
 
     elif mode == 'any':
-        filtered = df[df[key].isin(keywords).any(axis=1)]
+        filtered = session[session[key].isin(keywords).any(axis=1)]
 
     else:
         raise ValueError(f'{mode} not supported. Use any or all.')
@@ -424,13 +453,14 @@ class ScrollPlot:
                  vid_fpath=None,
                  **kwargs):
         """
-        Allows you to plot basically anything iterative and scroll through it.
+        Allows you to plot basically anything iterative and scroll
+        through it.
 
         :parameters
         ---
         plot_function: function
-            This function should be written specifically to draw from attrs
-            in this class and plot them.
+            This function should be written specifically to draw from
+            attrs in this class and plot them.
 
         nrows, ncols: ints
             Number of rows or columns in subplots.
@@ -524,8 +554,7 @@ def disp_frame(ScrollObj):
     """
     # Check that ScrollPlot object has all these attrs.
     attrs = ['vid', 'x', 'y']
-    for attr in attrs:
-        assert hasattr(ScrollObj, attr), (attr + ' missing')
+    check_attrs(ScrollObj, attrs)
 
     # Read the frame.
     try:
@@ -542,6 +571,11 @@ def disp_frame(ScrollObj):
 
     # Find limit.
     ScrollObj.last_position = int(ScrollObj.vid.get(7)) - 1
+
+
+def check_attrs(obj, attrs):
+    for attr in attrs:
+        assert hasattr(obj, attr), (attr + ' missing')
 
 
 def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
@@ -643,7 +677,6 @@ def sync_data(csv_path, minian_path, timestamp_path,
     return synced_behavior, minian, behavior
 
 
-
 def nan_array(size):
     arr = np.empty(size)
     arr.fill(np.nan)
@@ -651,7 +684,31 @@ def nan_array(size):
     return arr
 
 
+def compute_z_from(arr, mu, sigma):
+    """
+    Specify the mean and standard deviation for computing z-score
+    of an array. Useful for when you want to take z-score of a subset
+    of an array while using the whole array's statistics.
+    """
+    reshape_and_tile = lambda x: np.tile(x.reshape(-1,1), (1, arr.shape[1]))
+    mu = reshape_and_tile(mu)
+    sigma = reshape_and_tile(sigma)
+
+    z = (arr - mu)/sigma
+
+    return z
+
+
+
 if __name__ == '__main__':
-    folder = r'Z:\Will\SEFL\pp2\Day0_Baseline\4_14_19'
-    data = open_minian(folder)
-    bin_transients(data.S, 30)
+    dpath = r'Z:\Will\SEFL\pp1\Day7_MildStressor\4_24_19'
+    write_path = dpath
+
+    param_save_minian = {
+        'dpath': dpath,
+        'fname': 'minian',
+        'backend': 'zarr',
+        'meta_dict': dict(seesion_id=-1, session=-2, animal=-3),
+        'overwrite': False}
+
+    motcorr_video(param_save_minian, write_path)
