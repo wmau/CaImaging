@@ -21,7 +21,8 @@ from tkinter import filedialog
 
 
 def concat_avis(path=None, pattern='behavCam*.avi',
-                fname='Merged.avi', fps=30, isColor=True):
+                fname='Merged.avi', fps=30, isColor=True,
+                delete_original_files=False):
     """
     Concatenates behavioral avi files for ezTrack.
 
@@ -41,6 +42,10 @@ def concat_avis(path=None, pattern='behavCam*.avi',
     if path is None:
         path = filedialog.askdirectory()
     files = natsorted(glob.glob(os.path.join(path, pattern)))
+
+    if not files:
+        print(f'No files matching {pattern}')
+        return
 
     # Get width and height.
     cap = cv2.VideoCapture(files[0])
@@ -75,6 +80,10 @@ def concat_avis(path=None, pattern='behavCam*.avi',
 
     writer.release()
     print(f'Writing {final_clip_name}')
+
+    if delete_original_files:
+        print('Deleting original files.')
+        [os.remove(file) for file in files]
 
     return final_clip_name
 
@@ -169,8 +178,8 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
     return np.vstack(summed).T
 
 
-def get_transient_timestamps(neural_data, do_zscore=True,
-                             std_thresh=3):
+def get_transient_timestamps(neural_data, thresh_type='eps',
+                             do_zscore=True, std_thresh=3):
     """
     Converts an array of continuous time series (e.g., traces or S)
     into lists of timestamps where activity exceeds some threshold.
@@ -194,12 +203,16 @@ def get_transient_timestamps(neural_data, do_zscore=True,
 
     """
     # Compute thresholds for each neuron.
-    if do_zscore:
-        stds = np.std(neural_data, axis=1)
-        means = np.mean(neural_data, axis=1)
-        thresh = means + std_thresh*stds
+    neural_data = np.asarray(neural_data, dtype=np.float32)
+    if thresh_type == 'eps':
+        thresh = np.repeat(np.finfo(np.float32).eps, neural_data.shape[0])
     else:
-        thresh = np.repeat(std_thresh, neural_data.shape[0])
+        if do_zscore:
+            stds = np.std(neural_data, axis=1)
+            means = np.mean(neural_data, axis=1)
+            thresh = means + std_thresh*stds
+        else:
+            thresh = np.repeat(std_thresh, neural_data.shape[0])
 
     # Get event times and magnitudes.
     bool_arr = neural_data > np.tile(thresh,[neural_data.shape[1], 1]).T
@@ -699,6 +712,32 @@ def compute_z_from(arr, mu, sigma):
     return z
 
 
+def smooth(a, window_size):
+    # a: NumPy 1-D array containing the data to be smoothed
+    # WSZ: smoothing window size needs, which must be odd number,
+    # as in the original MATLAB implementation
+    out0 = np.convolve(a,np.ones(window_size,dtype=int),'valid')/window_size
+    r = np.arange(1,window_size-1,2)
+    start = np.cumsum(a[:window_size-1])[::2]/r
+    stop = (np.cumsum(a[:-window_size:-1])[::2]/r)[::-1]
+    return np.concatenate((  start , out0, stop  ))
+
+
+def smooth_array(a, window_size):
+    mat = [smooth(row, window_size) for row in a]
+
+    return np.asarray(mat)
+
+
+def zscore_list(lst):
+    mu = np.mean(np.hstack(lst), axis=1)
+    sigma = np.std(np.hstack(lst), axis=1)
+
+    z_list = [compute_z_from(i, mu, sigma) for i in lst]
+
+    return z_list
+
+
 
 if __name__ == '__main__':
     dpath = r'Z:\Will\SEFL\pp1\Day7_MildStressor\4_24_19'
@@ -710,5 +749,3 @@ if __name__ == '__main__':
         'backend': 'zarr',
         'meta_dict': dict(seesion_id=-1, session=-2, animal=-3),
         'overwrite': False}
-
-    motcorr_video(param_save_minian, write_path)
