@@ -284,7 +284,7 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp',
 
     if use_bool:
         bool_arr = util.get_transient_timestamps(neural_data,
-                                                 do_zscore=True)[2]
+                                                 thresh_type='eps')[2]
         actmat = bool_arr
     else:
         actmat = stats.zscore(neural_data, axis=1)
@@ -337,21 +337,77 @@ def membership_sort(patterns, neural_data, sort_duplicates=True):
     return sorted_data, sorted_colors
 
 
+def preprocess_multiple_sessions(S_list, smooth_factor=0,
+                                 neurons=None, use_bool=True,
+                                 z_method='global'):
+    # Store original data.
+    data = {'orig_S_list': S_list.copy()}
 
-def lapsed_activation(template_S, lapsed_Ss, nullhyp='circ',
-                      n_shuffles=1000, percentile=99, use_bool=True,
-                      z_method='global', plot=True, neurons=None):
+    # Keep certain neurons here. If None, keep all.
+    if neurons is not None:
+        S_list = [S[neurons] for S in S_list]
+
+    # Get event timestamps.
+    spike_times, rates, bool_arr_list, new_S = [], [], [], []
+    for S in S_list:
+        # Handle missing data.
+        S = np.asarray(S, dtype=float)
+        imp = SimpleImputer(missing_values=np.nan, strategy='constant',
+                            fill_value=0)
+        S = imp.fit_transform(S.T).T
+
+        # Get spiking timestamps.
+        temp_s, temp_r, temp_bool = \
+            util.get_transient_timestamps(S, thresh_type='eps',
+                                          do_zscore=False)
+        spike_times.append(temp_s)
+        rates.append(temp_r)
+        bool_arr_list.append(temp_bool)
+        new_S.append(S)
+    S_list = new_S
+
+    # Smooth if desired.
+    if smooth_factor > 0:
+        S_list = [util.smooth_array(S, smooth_factor)
+                  for S in S_list]
+        bool_arr_list = [util.smooth_array(spikes, smooth_factor)
+                         for spikes in bool_arr_list]
+
+    # Make sure to z-score. Either globally or locally.
+    # If global, take into account activity from all sessions that got
+    # passed through this function. If local, just z-score within
+    # session.
+    if z_method == 'global':
+        S_list = util.zscore_list(S_list)
+        bool_arr_list = util.zscore_list(bool_arr_list)
+
+    elif z_method == 'local':
+        S_list = [stats.zscore(S, axis=1) for S in S_list]
+        bool_arr_list = [stats.zscore(spikes, axis=1) for spikes in bool_arr_list]
+
+    data['S'] = S_list
+    data['spike_times'] = spike_times
+    data['spike_rates'] = rates
+    data['bool_arrs'] = bool_arr_list
+
+    if use_bool:
+        data['processed'] = bool_arr_list
+    else:
+        data['processed'] = S_list
+
+    return data
+
+def lapsed_activation(act_list, nullhyp='circ', n_shuffles=1000,
+                      percentile=99):
     """
     Computes activity of ensembles based on data from another day.
 
     :parameters
     ---
-    template_S: (neurons, time) array.
-        Neural activity.
-
-    lapsed_Ss: list of (neurons, time) arrays. len of list must be
-    sessions-1 AND in the same sorted order as template_S.
-        Neural activity from other sessions.
+    S_list: list of (neurons, time) arrays. The first entry will be
+    considered the template AND all arrays must be sorted by row
+    (neuron) in the same order.
+        Neural activity from all sessions.
 
         method: str
         'ica' or 'pca'. 'ica' is recommended.
@@ -370,99 +426,60 @@ def lapsed_activation(template_S, lapsed_Ss, nullhyp='circ',
         defines which percentile to be used use when shuffling methods are employed.
         (n/a if nullhyp is 'mp')
     """
-    # Useful variables.
-    lapsed_Ss = [lapsed_Ss] if not isinstance(lapsed_Ss, list) else lapsed_Ss
-
-    # For cases where you want to specify which neurons to consider for some
-    # reason.
-    if neurons is not None:
-        template_S = template_S[neurons]
-
-    # Make sure to z-score first. Either globally or locally.
-    # If global, take into account activity from all sessions that got
-    # passed through this function. If local, just z-score within
-    # session.
-    if z_method == 'global':
-        concat_S = np.hstack((template_S, np.hstack(lapsed_Ss)))
-        mu = np.mean(concat_S, axis=1)
-        sigma = np.std(concat_S, axis=1)
-
-        template_S = util.compute_z_from(template_S, mu, sigma)
-        lapsed_Ss = [util.compute_z_from(lapsed_S, mu, sigma) for lapsed_S in lapsed_Ss]
-
-    elif z_method == 'local':
-        template_S = stats.zscore(template_S, axis=1)
-        lapsed_Ss = [stats.zscore(lapsed_S, axis=1) for lapsed_S in lapsed_Ss]
-
-    # Get event timestamps.
-    spike_times, rate, bool_arr = \
-        util.get_transient_timestamps(template_S, do_zscore=False)
-    spike_times, rate, bool_arr = [spike_times], [rate], [bool_arr]
-    S_mats = [template_S]
-    for session in lapsed_Ss:
-        temp_s, temp_r, temp_bool = \
-            util.get_transient_timestamps(session, False)
-        spike_times.append(temp_s)
-        rate.append(temp_r)
-        bool_arr.append(temp_bool)
-        S_mats.append(session)
-
-    if use_bool:
-        actmat = bool_arr
-    else:
-        actmat = S_mats
-
     # Get patterns.
-    patterns= runPatterns(actmat[0], nullhyp=nullhyp, nshu=n_shuffles,
-                          percentile=percentile)[0]
+    patterns, significance, _= runPatterns(act_list[0],
+                                           nullhyp=nullhyp,
+                                           nshu=n_shuffles,
+                                           percentile=percentile)
+
+    if significance.nassemblies < 1:
+        raise ValueError('No assemblies detected.')
 
     # Find assembly activations for the template session then the lapsed ones.
     activations = []
-    # bool_arr[0] used to be z_data
-    #activations.append(computeAssemblyActivity(patterns, bool_arr[0]))
-    for session in actmat:
-        # Handle missing data.
-        # z_session = stats.zscore(session, axis=1)
-        session = np.asarray(session, dtype=float)
-        imp = SimpleImputer(missing_values=np.nan, strategy='constant',
-                            fill_value=0)
-        session = imp.fit_transform(session.T).T
-        #z_session = gaussian_filter1d(z_session, 2, 1)
-
+    for actmat in act_list:
         # Get activations.
-        activations.append(computeAssemblyActivity(patterns, session))
+        activations.append(computeAssemblyActivity(patterns, actmat))
 
-    # Sort neurons based on membership (weights) in different patterns.
-    sorted_spikes, color_list = [], []
-    for session in spike_times:
-        session_sorted_spikes, colors_sorted = \
-            membership_sort(patterns, session)
+    assemblies = {'activations': activations,
+                  'patterns': patterns,
+                  'significance': significance}
 
-        # Do this for each session.
-        color_list.append(colors_sorted)
-        sorted_spikes.append(session_sorted_spikes)
+    return assemblies
 
 
-    # Plot assembly activations.
-    if plot:
-        fig, axes = plot_assemblies(activations, sorted_spikes,
-                                    colors=color_list)
-
-        plt.tight_layout()
-        plt.show()
-    else:
-        fig, axes = None, None
-
-    # Compile data.
-    assemblies = dict(activations=activations,
-                      patterns=patterns,
-                      sorted_spike_times=sorted_spikes)
-
-    spikes = dict(S_normalized=S_mats,
-                  bool_arr=bool_arr,
-                  spike_times=spike_times)
-
-    return assemblies, spikes, fig, axes
+# DEPRECATED. Maybe integrate into plot_assemblies
+# def plot_assemblies():
+#     # Sort neurons based on membership (weights) in different patterns.
+#     sorted_spikes, color_list = [], []
+#     for session in spike_times:
+#         session_sorted_spikes, colors_sorted = \
+#             membership_sort(patterns, session)
+#
+#         # Do this for each session.
+#         color_list.append(colors_sorted)
+#         sorted_spikes.append(session_sorted_spikes)
+#
+#     # Plot assembly activations.
+#     if plot:
+#         fig, axes = plot_assemblies(activations, sorted_spikes,
+#                                     colors=color_list)
+#
+#         plt.tight_layout()
+#         plt.show()
+#
+#
+#     # Compile data.
+#     assemblies = dict(activations=activations,
+#                       patterns=patterns,
+#                       sorted_spike_times=sorted_spikes)
+#
+#     spikes = dict(S_normalized=S_mats,
+#                   bool_arr=bool_arr,
+#                   spike_times=spike_times,
+#                   smooth_actmat=smooth_actmat)
+#
+#     return assemblies, spikes
 
 
 def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
@@ -634,5 +651,4 @@ if __name__ == '__main__':
 
     plt.tight_layout()
     axs[0,1].set_title('Correlations')
-
-    pass
+    plt.show()

@@ -187,16 +187,10 @@ def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
         raise NotImplementedError("backend {} not supported".format(backend))
 
 
-def sync_preprocessed_data(folder, behavior_csv,
-                           critical_data=None):
-    minian_data = open_minian(folder)
-    behavior_data = pd.read_csv(behavior_csv)
-
-
 
 if __name__ == '__main__':
     folder = r'C:\Users\wm228\OneDrive\Documents\Sinai\Projects\Circle track\M1\03_09_2020\H11_M38_S32'
-    data = sync_preprocessed_data(folder)
+    #data = sync_preprocessed_data(folder)
 
     pass
 
