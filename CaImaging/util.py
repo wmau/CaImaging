@@ -5,13 +5,9 @@ import pandas as pd
 import numpy as np
 import cv2
 import itertools
-from csv import DictReader
 import math
 import matplotlib.pyplot as plt
 import tkinter as tk
-from scipy.stats import binned_statistic
-import xarray as xr
-from itertools import zip_longest
 
 from CaImaging.Miniscope import open_minian
 
@@ -86,31 +82,6 @@ def concat_avis(path=None, pattern='behavCam*.avi',
         [os.remove(file) for file in files]
 
     return final_clip_name
-
-
-def read_eztrack(csv_fname):
-    """
-    Reads ezTrack outputs.
-
-    Parameters
-    ---
-    csv_fname: str, path to tracking .csv from ezTrack.
-    cm_per_pixel: float, centimeters per pixel.
-
-    Return
-    ---
-    position: dict, with keys x, y, frame, distance.
-    """
-    # Open file.
-    df = pd.read_csv(csv_fname)
-
-    # Consolidate into dict.
-    position = {'x': np.asarray(df['X']),    # x position
-                'y': np.asarray(df['Y']),    # y position
-                'frame': np.asarray(df['Frame']),           # Frame number
-                'distance': np.asarray(df['Distance_px'])} # Distance traveled since last sample
-
-    return pd.DataFrame(position)
 
 
 def make_bins(data, samples_per_bin, axis=1):

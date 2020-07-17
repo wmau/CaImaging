@@ -1,4 +1,3 @@
-from CaImaging.util import load_session
 import numpy as np
 from CaImaging.Behavior import spatial_bin
 import matplotlib.pyplot as plt

@@ -1,5 +1,5 @@
 import cv2
-from CaImaging.util import read_eztrack, ScrollPlot, disp_frame, \
+from CaImaging.util import ScrollPlot, disp_frame, \
     consecutive_dist
 import numpy as np
 import os
@@ -10,6 +10,30 @@ import tkinter as tk
 tkroot = tk.Tk()
 tkroot.withdraw()
 from tkinter import filedialog
+
+def read_eztrack(csv_fname):
+    """
+    Reads ezTrack outputs.
+
+    Parameters
+    ---
+    csv_fname: str, path to tracking .csv from ezTrack.
+    cm_per_pixel: float, centimeters per pixel.
+
+    Return
+    ---
+    position: dict, with keys x, y, frame, distance.
+    """
+    # Open file.
+    df = pd.read_csv(csv_fname)
+
+    # Consolidate into dict.
+    position = {'x': np.asarray(df['X']),    # x position
+                'y': np.asarray(df['Y']),    # y position
+                'frame': np.asarray(df['Frame']),           # Frame number
+                'distance': np.asarray(df['Distance_px'])} # Distance traveled since last sample
+
+    return pd.DataFrame(position)
 
 def make_tracking_video(vid_path, csv_path, output_fname='Tracking.avi',
                         start=0, stop=None, fps=30):
@@ -240,7 +264,10 @@ class ManualCorrect:
         # Clicking the plot will bring you to the frame you want to
         # correct.
         self.velocity_fig, self.velocity_ax = plt.subplots(1,1)
-        self.velocity_ax.plot(self.df['Distance_in'])
+        try:
+            self.velocity_ax.plot(self.df['Distance_in'])
+        except:
+            self.velocity_ax.plot(self.df['Distance_px'])
         self.velocity_fig.canvas.mpl_connect('button_press_event',
                                              self.jump_to)
 
@@ -333,3 +360,5 @@ if __name__ == '__main__':
     fname = 'MergedDLC_resnet50_circletrackFeb4shuffle1_218500.h5'
     path = os.path.join(folder, fname)
     convert_dlc_to_eztrack(path)
+
+
