@@ -7,9 +7,10 @@ import pandas as pd
 from matplotlib.animation import FFMpegWriter
 import matplotlib.pyplot as plt
 import tkinter as tk
+
 tkroot = tk.Tk()
 tkroot.withdraw()
-from tkinter import filedialog
+
 
 def read_eztrack(csv_fname):
     """
@@ -352,7 +353,7 @@ def convert_dlc_to_eztrack(h5_path: str, save_path=None):
 
     data.to_csv(save_path)
 
-    return data
+    return data, save_path
 
 
 if __name__ == '__main__':
@@ -360,5 +361,4 @@ if __name__ == '__main__':
     fname = 'MergedDLC_resnet50_circletrackFeb4shuffle1_218500.h5'
     path = os.path.join(folder, fname)
     convert_dlc_to_eztrack(path)
-
 
