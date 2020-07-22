@@ -12,7 +12,7 @@ from CaImaging.util import find_closest
 # Change as needed to correspond to connected Arduino.
 # You can find the appropriate port with the Arduino IDE when you
 # have an Arduino connected to the USB.
-default_port = 'COM3'
+default_port = 'COM4'
 terminate = ''
 
 def list_COMports():
@@ -92,41 +92,19 @@ def read_Arduino(com_port=default_port,
         os.mkdir(os.path.join(directory, date_str))
 
     # Keeps going until you interrupt with Ctrl+C.
-    data_stream = []
     try:
 
         while True:
-            # if terminate == 'q':
-            #     print('success')
-            #     with open(fname, 'wb') as file:
-            #         for line in data_stream:
-            #             file.write(line)
-            #     ser.close()
-            #     break
-
             # Read serial port.
             data = ser.readline()
 
             # If there's incoming data, write line to txt file.
             if data:
                 with open(fname, 'ab+') as file:
-                #data_stream.append(data)
                     file.write(data)
 
     except:
-        #     pass
-        #     print('test')
-        #     with open(fname, 'wb') as file:
-        #         for line in data_stream:
-        #             file.write(line)
         ser.close()
-
-                #file.close()
-            # finally:
-            #     with open(fname, 'wb') as file:
-            #         for line in data_stream:
-            #             file.write(line)
-
 
 def main():
     global terminate
@@ -159,7 +137,7 @@ def clean_Arduino_output(fpath):
     offset: int
         Offset in milliseconds between Arduino and DAQ.
     """
-    data = pd.read_csv(fpath)
+    data = pd.read_csv(fpath, header=None)
     data.columns = ['Data','Frame','Timestamp']
 
     # Sometimes there are NaNs. Correct them before converting
@@ -204,6 +182,8 @@ def clean_Arduino_output(fpath):
     offset = int(os.path.split(fpath)[1][-8:-4])
 
     return data, offset
+
+
 
 if __name__ == '__main__':
     read_Arduino()
