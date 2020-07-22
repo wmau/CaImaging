@@ -13,7 +13,6 @@ from CaImaging.util import find_closest
 # You can find the appropriate port with the Arduino IDE when you
 # have an Arduino connected to the USB.
 default_port = 'COM4'
-terminate = ''
 
 def list_COMports():
     """
@@ -48,7 +47,7 @@ def initialize(com_port=default_port):
     clock_time: float, Unix time retrieved right after receiving
         Arduino timestamp.
     """
-    # Connect to serial port.
+    # Connect to serial port. Make sure the baud rates match.
     ser = serial.Serial(com_port, 115200)
     print(f'Arduino at {com_port} connected')
 
@@ -78,45 +77,41 @@ def read_Arduino(com_port=default_port,
 
 
     """
-    # Initialize Arduino connection.
-    global terminate
     ser, t, clock_t = initialize(com_port)
-
-    # File name building.
-    date_str = clock_t.strftime('%Y-%b-%d')
-    time_string = clock_t.strftime('H%H_M%M_S%S.%f')[:-2] + ' ' + t.decode('utf-8')[:-2]
-    fname = os.path.join(directory, date_str, time_string + '.txt')
-
-    # Try to make file. If directory doesn't exist, make it.
-    if not os.path.isdir(os.path.join(directory, date_str)):
-        os.mkdir(os.path.join(directory, date_str))
+    fname = make_timestamp_fname(directory, clock_t, t)
 
     # Keeps going until you interrupt with Ctrl+C.
     try:
-
         while True:
             # Read serial port.
             data = ser.readline()
 
             # If there's incoming data, write line to txt file.
             if data:
+                timestamp = round((datetime.now() - clock_t).total_seconds() * 1000)
+                data_str = data.decode('utf-8')
+                port_and_frame = data_str.split('\r\n')[0]
+                data = (port_and_frame + ', ' +
+                     str(timestamp) + '\r\n').encode('utf-8')
+
                 with open(fname, 'ab+') as file:
                     file.write(data)
 
     except:
         ser.close()
 
-def main():
-    global terminate
 
-    run_event = threading.Event()
-    run_event.set()
+def make_timestamp_fname(directory, clock_t, t):
+    # File name building.
+    date_str = clock_t.strftime('%Y-%b-%d')
+    time_string = clock_t.strftime('H%H_M%M_S%S.%f')[:-2] + ' ' + t.decode('utf-8')[:-2]
+    fname = os.path.join(directory, date_str, time_string + '.txt')
 
-    main_event = threading.Thread(target=read_Arduino)
-    main_event.start()
+    # If directory doesn't exist, make it.
+    if not os.path.isdir(os.path.join(directory, date_str)):
+        os.mkdir(os.path.join(directory, date_str))
 
-    terminate = input()
-
+    return fname
 
 
 def clean_Arduino_output(fpath):
