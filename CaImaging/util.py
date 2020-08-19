@@ -8,6 +8,8 @@ import itertools
 import math
 import matplotlib.pyplot as plt
 import tkinter as tk
+from pathlib import Path
+import shutil
 
 from CaImaging.Miniscope import open_minian
 
@@ -17,7 +19,7 @@ from tkinter import filedialog
 
 
 def concat_avis(path=None, pattern='behavCam*.avi',
-                fname='Merged.avi', fps=30, isColor=True,
+                fname=None, fps=30, isColor=True,
                 delete_original_files=False):
     """
     Concatenates behavioral avi files for ezTrack.
@@ -48,11 +50,21 @@ def concat_avis(path=None, pattern='behavCam*.avi',
     size = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), \
            int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+    # File name for the final avi.
+    if fname is None:
+        final_clip_name = os.path.join(path, 'Merged.avi')
+    else:
+        final_clip_name = fname
+    if os.path.exists(final_clip_name):
+        print('File already exists!')
+        return final_clip_name
+
     # Define writer.
     fourcc = 0
-    final_clip_name = os.path.join(path, fname)
     writer = cv2.VideoWriter(final_clip_name, fourcc,
                              fps, size, isColor=isColor)
+
+
 
     for file in files:
         print(f'Processing {file}')
@@ -82,6 +94,37 @@ def concat_avis(path=None, pattern='behavCam*.avi',
         [os.remove(file) for file in files]
 
     return final_clip_name
+
+
+def get_session_folders(mouse_folder):
+    folders = [folder for folder in
+               Path(mouse_folder).rglob('H*_M*_S*')
+               if folder.is_dir()]
+
+    return folders
+
+
+def batch_concat_behavior(folder, destination):
+    session_folders = get_session_folders(folder)
+
+    for session in session_folders:
+        fname = concat_avis(session, fname=None,
+                            pattern='behavCam*.avi')
+
+        split_path = os.path.split(os.path.split(session)[0])
+        session_id = split_path[1]
+        mouse = os.path.split(split_path[0])[1]
+        new_fname = os.path.join(destination, mouse + '_'
+                                 + session_id + '.avi')
+
+        if not os.path.exists(new_fname):
+            print(f'Attempting to copy {new_fname}.')
+            shutil.copyfile(fname, new_fname)
+            print(' ')
+            print(f'{new_fname} copied successfully.')
+        else:
+            print(f'{new_fname} already exists!')
+
 
 
 def make_bins(data, samples_per_bin, axis=1):
@@ -544,11 +587,13 @@ def disp_frame(ScrollObj):
     try:
         ScrollObj.vid.set(1, ScrollObj.current_position)
         ret, frame = ScrollObj.vid.read()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     except:
         raise ValueError('Something went wrong with reading video.')
 
     # Plot the frame and position.
     ScrollObj.ax.imshow(frame)
+    ScrollObj.ax.set_autoscale_on(False)
     ScrollObj.ax.scatter(ScrollObj.x[ScrollObj.current_position],
                          ScrollObj.y[ScrollObj.current_position],
                          marker='+', s=80, c='r')
@@ -711,12 +756,6 @@ def zscore_list(lst):
 
 
 if __name__ == '__main__':
-    dpath = r'Z:\Will\SEFL\pp1\Day7_MildStressor\4_24_19'
-    write_path = dpath
-
-    param_save_minian = {
-        'dpath': dpath,
-        'fname': 'minian',
-        'backend': 'zarr',
-        'meta_dict': dict(seesion_id=-1, session=-2, animal=-3),
-        'overwrite': False}
+    folder = r'Z:\Will\Drift\Data\Alcor_Scope20'
+    destination = r'Z:\Will\Drift\Data\Alcor_Scope20\Behavior'
+    batch_concat_behavior(folder, destination)
