@@ -7,6 +7,7 @@ import pandas as pd
 from matplotlib.animation import FFMpegWriter
 import matplotlib.pyplot as plt
 import tkinter as tk
+import glob
 
 tkroot = tk.Tk()
 tkroot.withdraw()
@@ -181,8 +182,8 @@ class ManualCorrect:
             video_dict['fpath'] = \
                 os.path.join(os.path.normpath(video_dict['dpath']),
                              video_dict['file'])
-            self.video_dict['csv_fpath'] = \
-                os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv'
+            self.video_dict['csv_fpath'] = glob.glob(os.path.join(video_dict['dpath'],
+                                                                  '*LocationOutput.csv'))[0]
 
         # Read csv.
         try:
