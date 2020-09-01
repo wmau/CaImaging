@@ -798,6 +798,14 @@ def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None):
     ax.fill_between(x, ymax, ymin, color=color, alpha=alpha_fill)
 
 
+def chunk(lst, n):
+    chunked = []
+    for i in range(0, len(lst), n):
+        chunked.append(lst[i:i+n])
+
+    return chunked
+
+
 
 if __name__ == '__main__':
     folder = r'Z:\Will\Drift\Data\Alcor_Scope20'
