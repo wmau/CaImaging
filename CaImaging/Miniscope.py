@@ -132,15 +132,12 @@ def project_image(vpath, projection_type='min',
                   downsample_strategy='subset',
                   post_process=None):
 
-    data = load_videos(vpath, pattern=pattern, dtype=dtype,
-                       downsample=downsample,
-                       downsample_strategy=downsample_strategy,
-                       post_process=post_process)
+    data = open_minian(vpath)
 
     if projection_type == 'min':
-        proj = data.min('frame').compute()
+        proj = data.Y.min('frame').compute()
     elif projection_type == 'max':
-        proj = data.max('frame').compute()
+        proj = data.Y.max('frame').compute()
 
     fig, ax = plt.subplots()
     ax.imshow(proj, cmap='gray', origin='lower')

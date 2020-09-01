@@ -50,7 +50,6 @@ class PlaceFields():
                     s=3, c=transient_color)
 
 
-
     def make_occupancy_map(self, bin_size_cm=20, plot=True, ax=None):
         """
         Makes the occupancy heat cell_map of the animal.

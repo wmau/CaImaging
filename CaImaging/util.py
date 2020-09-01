@@ -756,6 +756,10 @@ def zscore_list(lst):
 
 
 if __name__ == '__main__':
-    folder = r'Z:\Will\Drift\Data\Alcor_Scope20'
-    destination = r'Z:\Will\Drift\Data\Alcor_Scope20\Behavior'
-    batch_concat_behavior(folder, destination)
+    folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
+    csv_path = os.path.join(folder, 'PreprocessedBehavior.csv')
+    minian_path = folder
+    timestamp_path = os.path.join(folder, 'timestamp.dat')
+
+    sync_data(csv_path, minian_path, timestamp_path, miniscope_cam=2,
+              behav_cam=0)
