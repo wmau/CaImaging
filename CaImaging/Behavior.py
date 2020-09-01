@@ -209,6 +209,7 @@ class ManualCorrect:
                              x=self.df['X'], y=self.df['Y'],
                              titles=frame_nums)
 
+
     def correct_position(self, start_frame=None):
         """
         Correct position starting from start_frame. If left to default,
