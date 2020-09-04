@@ -806,6 +806,9 @@ def chunk(lst, n):
     return chunked
 
 
+def round_up_to_odd(f):
+    return int(np.ceil(f) // 2 * 2 + 1)
+
 
 if __name__ == '__main__':
     folder = r'Z:\Will\Drift\Data\Alcor_Scope20'
