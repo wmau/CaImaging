@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from pathlib import Path
 import shutil
+import re
 
 from CaImaging.Miniscope import open_minian
 
@@ -456,15 +457,26 @@ def find_closest(array, value, sorted=False):
 def get_data_paths(session_folder, pattern_dict):
     paths = {}
     for type, pattern in pattern_dict.items():
-        match = glob.glob(os.path.join(session_folder, pattern))
-        assert len(match) < 2, (f'Multiple possible files/folders detected. '
-                                f'{match}')
+        paths[type] = []
+        for root, _, files in os.walk(session_folder):
+            for file in files:
+                if re.match(pattern, file):
+                    paths[type].append(os.path.join(root, file))
 
-        try:
-            paths[type] = match[0]
-        except:
-            print(type + ' not found.')
-            paths[type] = None
+        if not paths[type]:
+            print(f'{type} not found.')
+        if len(paths[type]) > 1:
+            print(f'Multiple {type} files found.')
+
+        # match = glob.glob(os.path.join(session_folder, pattern))
+        # assert len(match) < 2, (f'Multiple possible files/folders detected. '
+        #                         f'{match}')
+        #
+        # try:
+        #     paths[type] = match[0]
+        # except:
+        #     print(type + ' not found.')
+        #     paths[type] = None
 
     return paths
 

@@ -125,12 +125,7 @@ def load_tif_perframe(fname, fid):
 
 
 def project_image(vpath, projection_type='min',
-                  fname = 'MinimumProjection.pdf',
-                  pattern='msCam[0-9]+\.avi$',
-                  dtype=np.float64,
-                  downsample=None,
-                  downsample_strategy='subset',
-                  post_process=None):
+                  fname = 'MinimumProjection.pdf'):
 
     data = open_minian(vpath)
 
