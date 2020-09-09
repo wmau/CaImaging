@@ -465,8 +465,10 @@ def get_data_paths(session_folder, pattern_dict):
 
         if not paths[type]:
             print(f'{type} not found.')
-        if len(paths[type]) > 1:
+        elif len(paths[type]) > 1:
             print(f'Multiple {type} files found.')
+        elif len(paths[type]) == 1:
+            paths[type] = paths[type][0]
 
         # match = glob.glob(os.path.join(session_folder, pattern))
         # assert len(match) < 2, (f'Multiple possible files/folders detected. '
