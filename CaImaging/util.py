@@ -672,6 +672,17 @@ def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
     return ts_map, ts
 
 
+def sync_cameras_v4(miniscope_file, behavior_file):
+    ts = {'miniscope': pd.read_csv(miniscope_file),
+          'behavior': pd.read_csv(behavior_file)
+          }
+
+    for camera in ['miniscope', 'behavior']:
+        ts[camera].insert(0, 'Camera', camera)
+
+    pass
+
+
 def sync_data(csv_path, minian_path, timestamp_path,
               miniscope_cam=6, behav_cam=1):
     """
@@ -851,10 +862,14 @@ def contiguous_regions(condition):
 
 
 if __name__ == '__main__':
-    folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
-    csv_path = os.path.join(folder, 'PreprocessedBehavior.csv')
-    minian_path = folder
-    timestamp_path = os.path.join(folder, 'timestamp.dat')
+    # folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
+    # csv_path = os.path.join(folder, 'PreprocessedBehavior.csv')
+    # minian_path = folder
+    # timestamp_path = os.path.join(folder, 'timestamp.dat')
+    #
+    # sync_data(csv_path, minian_path, timestamp_path, miniscope_cam=2,
+    #           behav_cam=0)
 
-    sync_data(csv_path, minian_path, timestamp_path, miniscope_cam=2,
-              behav_cam=0)
+    behavior_file = r'Z:\Will\Drift\Data\Castor_Scope05\09_06_2020_CircleTrack_Shaping_1\17_11_36\BehavCam_0\timeStamps.csv'
+    miniscope_file = r'Z:\Will\Drift\Data\Castor_Scope05\09_06_2020_CircleTrack_Shaping_1\17_11_36\Miniscope\timeStamps.csv'
+    sync_cameras_v4(miniscope_file, behavior_file)
