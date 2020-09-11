@@ -647,8 +647,10 @@ def sync_cameras(timestamps, miniscope_cam=6, behav_cam=2):
         ts = pd.read_csv(timestamps, sep="\s+")
     elif type(timestamps) == pd.DataFrame:
         ts = timestamps
-    #cam_change = behav_cam - miniscope_cam
+    else:
+        raise TypeError('timestamps must be a DataFrame or a path.')
 
+    #cam_change = behav_cam - miniscope_cam
     # ts["change_point"] = ts["camNum"].diff()
     ts["ts_behav"] = np.where(ts["camNum"] == behav_cam,
                               ts["sysClock"], np.nan)
