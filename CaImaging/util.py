@@ -687,7 +687,7 @@ def sync_cameras_v4(miniscope_file, behavior_file):
         Full path to miniscope timeStamps.csv.
 
     behavior_file: str
-        Full path to miniscope timeStamps.csv.
+        Full path to behavior timeStamps.csv.
     """
     # Read the csv.
     ts = {'miniscope': pd.read_csv(miniscope_file),
@@ -719,7 +719,7 @@ def sync_cameras_v4(miniscope_file, behavior_file):
     # sync_cameras() corrects for 1-indexing. The lines below undoes
     # the correction, which is not necessary in the first place
     # because it's already 0-indexed. (Don't want to modify
-    # sync_cameras() for legacy purposes). 
+    # sync_cameras() for legacy purposes).
     ts_map["fmCam0"] += 1
     ts_map["fmCam1"] += 1
 
