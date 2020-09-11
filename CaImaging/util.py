@@ -621,12 +621,12 @@ def check_attrs(obj, attrs):
         assert hasattr(obj, attr), (attr + ' missing')
 
 
-def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
+def sync_cameras(timestamps, miniscope_cam=6, behav_cam=2):
     """cell_map frames from Cam1 to Cam0 with nearest neighbour using the timestamp file from miniscope recordings.
 
     Parameters
     ----------
-    timestamp_fpath: str
+    timestamps: str
         Full file path to timestamp.dat file.
         Yields timestamp dataframe. should contain field 'frameNum', 'camNum' and 'sysClock'
 
@@ -643,7 +643,10 @@ def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
         fmCam0 is the miniscope cam.
         fmCam1 is the behavior cam.
     """
-    ts = pd.read_csv(timestamp_fpath, sep="\s+")
+    if type(timestamps) == str:
+        ts = pd.read_csv(timestamps, sep="\s+")
+    elif type(timestamps) == pd.DataFrame:
+        ts = timestamps
     #cam_change = behav_cam - miniscope_cam
 
     # ts["change_point"] = ts["camNum"].diff()
@@ -666,6 +669,7 @@ def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
             .rename(columns=dict(frameNum="fmCam0"))
             .astype(dict(fmCam1=int))
     )
+
     ts_map["fmCam0"] = ts_map["fmCam0"] - 1
     ts_map["fmCam1"] = ts_map["fmCam1"] - 1
 
@@ -673,14 +677,53 @@ def sync_cameras(timestamp_fpath, miniscope_cam=6, behav_cam=2):
 
 
 def sync_cameras_v4(miniscope_file, behavior_file):
+    """
+    Synchronizes behavior and miniscope data for the next generation
+    acquisition software (DAQ-QT v1.01).
+
+    :parameters
+    ---
+    miniscope_file: str
+        Full path to miniscope timeStamps.csv.
+
+    behavior_file: str
+        Full path to miniscope timeStamps.csv.
+    """
+    # Read the csv.
     ts = {'miniscope': pd.read_csv(miniscope_file),
           'behavior': pd.read_csv(behavior_file)
           }
 
+    # Insert a 'camNum' column.
     for camera in ['miniscope', 'behavior']:
         ts[camera].insert(0, 'Camera', camera)
 
-    pass
+    # Combine the behavior and miniscope timestamp data to mimic
+    # the old (v3) acquisition software's timestamps.dat.
+    # Sort by timestamps, then rename the columns to the old format.
+    combined = pd.concat([ts['miniscope'], ts['behavior']])
+    sorted_data = combined.sort_values('Time Stamp (ms)')
+    sorted_data = sorted_data.rename(columns={'Camera': 'camNum',
+                                              'Frame Number': 'frameNum',
+                                              'Time Stamp (ms)': 'sysClock'})
+
+    # Arbitrarily assign numbers to miniscope and behavior cams to
+    # mimic device ID in old software.
+    sorted_data.loc[sorted_data['camNum'] == 'miniscope', 'camNum'] = 1
+    sorted_data.loc[sorted_data['camNum'] == 'behavior', 'camNum'] = 0
+
+    ts_map, ts = sync_cameras(sorted_data, miniscope_cam=1,
+                              behav_cam=0)
+
+    # New software is 0 indexed, rather than 1-indexed.
+    # sync_cameras() corrects for 1-indexing. The lines below undoes
+    # the correction, which is not necessary in the first place
+    # because it's already 0-indexed. (Don't want to modify
+    # sync_cameras() for legacy purposes). 
+    ts_map["fmCam0"] += 1
+    ts_map["fmCam1"] += 1
+
+    return ts_map, ts
 
 
 def sync_data(csv_path, minian_path, timestamp_path,
