@@ -454,31 +454,79 @@ def find_closest(array, value, sorted=False):
         return idx, array[idx]
 
 
+# def get_data_paths(dir, pattern_dict, paths=None, subfolders=None,
+#                    files=None):
+#     if subfolders is None:
+#         subfolders = []
+#     if files is None:
+#         files = []
+#     keys_for_directories = ['minian']
+#     keys = pattern_dict.keys()
+#
+#     # Segregate pattern mapping dict into paths that correspond to
+#     # files versus folders.
+#     dir_dict = {key: re.compile(pattern_dict[key])
+#                 for key in keys
+#                 if key in keys_for_directories}
+#     file_dict = {key: re.compile(pattern_dict[key])
+#                  for key in keys
+#                  if key not in keys_for_directories}
+#
+#     if paths is None:
+#         paths = dict()
+#     for f in os.scandir(dir):
+#         if f.is_dir():
+#             subfolders.append(f.path)
+#
+#             for key, pattern in dir_dict.items():
+#                 if pattern.match(f.path):
+#                     paths[key] = f.path
+#
+#         if f.is_file():
+#             files.append(f.path)
+#             for key, pattern in file_dict.items():
+#                 if pattern.match(f.path):
+#                     paths[key] = f.path
+#
+#     for dir in list(subfolders):
+#         paths, sf, f = get_data_paths(dir, pattern_dict, paths,
+#                                       subfolders, files)
+#         subfolders.extend(sf)
+#         files.extend(f)
+#
+#
+#     return paths, subfolders, files
+#
+
 def get_data_paths(session_folder, pattern_dict):
     paths = {}
     for type, pattern in pattern_dict.items():
         paths[type] = []
-        for root, _, files in os.walk(session_folder):
+
+    for root, dirs, files in os.walk(session_folder):
+        for type, pattern in pattern_dict.items():
             for file in files:
                 if re.match(pattern, file):
                     paths[type].append(os.path.join(root, file))
 
+            for directory in dirs:
+                if re.match(pattern, directory):
+
+                    # open_minian input is the root, not the full path
+                    # to the minian folder.
+                    if type == 'minian':
+                        paths[type].append(root)
+                    else:
+                        paths[type].append(os.path.join(root,
+                                                        directory))
+
+    for type, pattern in pattern_dict.items():
         if not paths[type]:
-            print(f'{type} not found.')
+            print(f'{type} not found for {session_folder}.')
         elif len(paths[type]) > 1:
-            print(f'Multiple {type} files found.')
+            print(f'Multiple {type} files found for {session_folder}.')
         elif len(paths[type]) == 1:
             paths[type] = paths[type][0]
-
-        # match = glob.glob(os.path.join(session_folder, pattern))
-        # assert len(match) < 2, (f'Multiple possible files/folders detected. '
-        #                         f'{match}')
-        #
-        # try:
-        #     paths[type] = match[0]
-        # except:
-        #     print(type + ' not found.')
-        #     paths[type] = None
 
     return paths
 
@@ -711,11 +759,11 @@ def sync_cameras_v4(miniscope_file, behavior_file):
 
     # Arbitrarily assign numbers to miniscope and behavior cams to
     # mimic device ID in old software.
-    sorted_data.loc[sorted_data['camNum'] == 'miniscope', 'camNum'] = 1
-    sorted_data.loc[sorted_data['camNum'] == 'behavior', 'camNum'] = 0
+    sorted_data.loc[sorted_data['camNum'] == 'miniscope', 'camNum'] = 0
+    sorted_data.loc[sorted_data['camNum'] == 'behavior', 'camNum'] = 1
 
-    ts_map, ts = sync_cameras(sorted_data, miniscope_cam=1,
-                              behav_cam=0)
+    ts_map, ts = sync_cameras(sorted_data, miniscope_cam=0,
+                              behav_cam=1)
 
     # New software is 0 indexed, rather than 1-indexed.
     # sync_cameras() corrects for 1-indexing. The lines below undoes
@@ -728,21 +776,23 @@ def sync_cameras_v4(miniscope_file, behavior_file):
     return ts_map, ts
 
 
-def sync_data(csv_path, minian_path, timestamp_path,
+def sync_data(behavior_data, minian_path, timestamp_path,
               miniscope_cam=6, behav_cam=1):
     """
     Synchronizes minian and behavior time series.
 
     :parameters
     ---
-    csv_path: str
+    behavior_data: str
         Full file path to a csv from ezTrack.
 
     minian_path: str
         Full file path to the folder containing the minian folder.
 
     timestamp_path: str
-        Full file path to the timestamp.dat file.
+        Full file path to the timestamp.dat file. Or for data acquired
+        with the new DAQ-QT software, a 2-element list of the behavior
+        and the miniscope timeStamp.csv paths.
 
     miniscope_cam: int
         Camera number corresponding to the miniscope.
@@ -758,22 +808,45 @@ def sync_data(csv_path, minian_path, timestamp_path,
 
     """
     # Open behavior csv (from ezTrack) and minian files.
-    behavior = pd.read_csv(csv_path)
+    if type(behavior_data) == str:
+        behavior = pd.read_csv(behavior_data)
+    elif type(behavior_data) == pd.DataFrame:
+        behavior = behavior_data
+    else:
+        raise TypeError('behavior data must be str or DataFrame.')
+
     minian = open_minian(minian_path)
 
     # Match up timestamps from minian and behavior. Use minian
     # as the reference.
-    ts_map, ts = sync_cameras(timestamp_path,
-                              miniscope_cam=miniscope_cam,
-                              behav_cam=behav_cam)
+    if type(timestamp_path) == str:
+        ts_map, ts = sync_cameras(timestamp_path,
+                                  miniscope_cam=miniscope_cam,
+                                  behav_cam=behav_cam)
+    elif type(timestamp_path) == list:
+        miniscope_file = [folder for folder in timestamp_path
+                          if 'Miniscope' in
+                          os.path.split(folder)[0]][0]
+        behavior_file = [folder for folder in timestamp_path
+                         if 'BehavCam' in os.path.split(folder)[0]][0]
+        ts_map, ts = sync_cameras_v4(miniscope_file, behavior_file)
+    else:
+        raise TypeError('timestamp_path must be str or list.')
+
     miniscope_frames = np.asarray(minian.C.frame)
+    miniscope_frames = miniscope_frames[miniscope_frames <= ts_map.index[-1]]
     behavior_frames = ts_map.fmCam1.iloc[miniscope_frames]
 
     # Rearrange all the behavior frames.
     synced_behavior = behavior.iloc[behavior_frames]
     synced_behavior.reset_index(drop=True, inplace=True)
 
-    return synced_behavior, minian, behavior
+    # Calcium data.
+    ca_data = {'C': np.asarray(minian.C.sel(frame=miniscope_frames)),
+               'S': np.asarray(minian.S.sel(frame=miniscope_frames)),
+               'A': np.asarray(minian.A)}
+
+    return synced_behavior, ca_data, behavior
 
 
 def nan_array(size):
@@ -908,11 +981,11 @@ def contiguous_regions(condition):
 
 if __name__ == '__main__':
     # folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
-    # csv_path = os.path.join(folder, 'PreprocessedBehavior.csv')
+    # behavior_data = os.path.join(folder, 'PreprocessedBehavior.csv')
     # minian_path = folder
     # timestamp_path = os.path.join(folder, 'timestamp.dat')
     #
-    # sync_data(csv_path, minian_path, timestamp_path, miniscope_cam=2,
+    # sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=2,
     #           behav_cam=0)
 
     behavior_file = r'Z:\Will\Drift\Data\Castor_Scope05\09_06_2020_CircleTrack_Shaping_1\17_11_36\BehavCam_0\timeStamps.csv'
