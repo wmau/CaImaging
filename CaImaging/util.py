@@ -835,7 +835,7 @@ def sync_data(behavior_data, minian_path, timestamp_path,
 
     miniscope_frames = np.asarray(minian.C.frame)
     miniscope_frames = miniscope_frames[miniscope_frames <= ts_map.index[-1]]
-    behavior_frames = ts_map.fmCam1.iloc[miniscope_frames]
+    behavior_frames = ts_map.fmCam1.loc[ts_map.fmCam0.isin(miniscope_frames)]
 
     # Rearrange all the behavior frames.
     synced_behavior = behavior.iloc[behavior_frames]
@@ -988,6 +988,9 @@ if __name__ == '__main__':
     # sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=2,
     #           behav_cam=0)
 
-    behavior_file = r'Z:\Will\Drift\Data\Castor_Scope05\09_06_2020_CircleTrack_Shaping_1\17_11_36\BehavCam_0\timeStamps.csv'
-    miniscope_file = r'Z:\Will\Drift\Data\Castor_Scope05\09_06_2020_CircleTrack_Shaping_1\17_11_36\Miniscope\timeStamps.csv'
-    sync_cameras_v4(miniscope_file, behavior_file)
+    behavior_path = r'Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\G11LTD2Merged_LocationOutput.csv'
+    minian_path = r'Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5'
+    timestamp_path = r'Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\timestamp.dat'
+
+    sync_data(behavior_path, minian_path, timestamp_path,
+              miniscope_cam=2, behav_cam=0)
