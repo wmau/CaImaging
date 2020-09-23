@@ -177,7 +177,7 @@ class CellRegObj:
         filename_centroids = \
             os.path.join(self.path, 'CellRegCentroids.pkl')
 
-        match_map.to_csv(filename)
+        match_map.to_csv(filename, index=False)
         with open(filename_footprints, 'wb') as output:
             pickle.dump(footprints, output, protocol=4)
         with open(filename_centroids, 'wb') as output:
@@ -377,5 +377,5 @@ def plot_footprints(cell_map, cols, neurons=range(10)):
 
     sessions = get_cellmap_columns(cell_map, cols)
 
-
-    CellRegObj(r'Z:\\Will\\SEFL\\pp1\\SpatialFootprints\\CellRegResults')
+if __name__ == '__main__':
+    CellRegObj(r'Z:\Will\Drift\Data\Castor_Scope05\SpatialFootprints\CellRegResults')
