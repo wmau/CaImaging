@@ -1,4 +1,4 @@
-from CaImaging.util import filter_sessions
+from CaImaging.util import filter_sessions, nan_array
 from CaImaging.Miniscope import open_minian
 from pathlib import Path
 import os
@@ -306,7 +306,8 @@ def rearrange_neurons(cell_map, neural_data):
         cell_map = np.expand_dims(cell_map, 1)
     neural_data = [neural_data] if not isinstance(neural_data, list) else neural_data
 
-    if not -1 in cell_map:
+    nan_as_int = -2147483648
+    if not nan_as_int in cell_map:
         # Do a simple rearrangement of rows based on mappings.
         rearranged = []
         for n, session in enumerate(neural_data):
@@ -322,12 +323,12 @@ def rearrange_neurons(cell_map, neural_data):
 
         for n, session in enumerate(neural_data):
             # Assume neuron is not active, fill with zeros.
-            rearranged_session = np.zeros((cell_map.shape[0], session.shape[1]))
+            rearranged_session = nan_array((cell_map.shape[0], session.shape[1]))
 
             # Be sure to only grab neurons if cell_map value is > -1.
             # Otherwise, it will take the last neuron (-1).
             for m, neuron in enumerate(cell_map[:, n]):
-                if neuron > -1:
+                if neuron > nan_as_int:
                     rearranged_session[m] = session[neuron]
 
             # Append rearranged matrix with paddded zeros.
