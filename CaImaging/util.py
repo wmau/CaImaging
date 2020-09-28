@@ -540,6 +540,7 @@ class ScrollPlot:
                  figsize=(8, 6),
                  current_position=0,
                  vid_fpath=None,
+                 subplot_kw={'projection': 'rectilinear'},
                  **kwargs):
         """
         Allows you to plot basically anything iterative and scroll
@@ -585,7 +586,8 @@ class ScrollPlot:
         # Make figure.
         self.fig, (self.ax) = plt.subplots(self.nrows,
                                            self.ncols,
-                                           figsize=self.figsize)
+                                           figsize=self.figsize,
+                                           subplot_kw=subplot_kw)
 
         # Plot then apply title.
         self.plot_function(self)
