@@ -1,11 +1,13 @@
 import numpy as np
 from CaImaging.Behavior import spatial_bin
 import matplotlib.pyplot as plt
-plt.rcParams['pdf.fonttype'] = 42
-plt.rcParams.update({'font.size': 12})
 
-class PlaceFields():
-    def __init__(self, x, y, neural_data, bin_size_cm=20):
+plt.rcParams["pdf.fonttype"] = 42
+plt.rcParams.update({"font.size": 12})
+
+
+class PlaceFields:
+    def __init__(self, x, y, neural_data, bin_size_cm=20, one_dim=False):
         """
         Place field object.
 
@@ -16,12 +18,13 @@ class PlaceFields():
         """
         self.x, self.y = x, y
         self.neural_data = neural_data
+        self.one_dim = one_dim
 
         self.make_occupancy_map(bin_size_cm=bin_size_cm, plot=False)
 
-
-    def plot_dots(self, neuron, std_thresh=2, pos_color='k',
-                  transient_color='r', ax=None):
+    def plot_dots(
+        self, neuron, std_thresh=2, pos_color="k", transient_color="r", ax=None
+    ):
         """
         Plots a dot plot. Position samples with suprathreshold activity
         dots overlaid.
@@ -37,8 +40,9 @@ class PlaceFields():
 
         """
         # Define threshold.
-        thresh = np.mean(self.neural_data[neuron]) + \
-                 std_thresh*np.std(self.neural_data[neuron])
+        thresh = np.mean(self.neural_data[neuron]) + std_thresh * np.std(
+            self.neural_data[neuron]
+        )
         supra_thresh = self.neural_data[neuron] > thresh
 
         # Plot.
@@ -46,9 +50,7 @@ class PlaceFields():
             fig, ax = plt.subplots()
 
         ax.scatter(self.x, self.y, s=3, c=pos_color)
-        ax.scatter(self.x[supra_thresh], self.y[supra_thresh],
-                    s=3, c=transient_color)
-
+        ax.scatter(self.x[supra_thresh], self.y[supra_thresh], s=3, c=transient_color)
 
     def make_occupancy_map(self, bin_size_cm=20, plot=True, ax=None):
         """
@@ -60,19 +62,17 @@ class PlaceFields():
         plot: bool, flag for plotting.
 
         """
-        self.occupancy_map = spatial_bin(self.x, self.y,
-                                         bin_size_cm=bin_size_cm,
-                                         plot=plot)
+        self.occupancy_map = spatial_bin(
+            self.x, self.y, bin_size_cm=bin_size_cm, plot=plot, one_dim=self.one_dim
+        )[0]
 
         if plot:
             if ax is None:
                 fig, ax = plt.subplots()
 
-            ax.imshow(self.occupancy_map, origin='lower')
+            ax.imshow(self.occupancy_map, origin="lower")
 
-
-    def make_place_field(self, neuron, bin_size_cm=20, plot=True,
-                         ax=None):
+    def make_place_field(self, neuron, bin_size_cm=20, plot=True, ax=None):
         """
         Bins activity in space. Essentially a 2d histogram weighted by
         neural activity.
@@ -87,9 +87,14 @@ class PlaceFields():
         ---
         pf: (x,y) array, 2d histogram of position weighted by activity.
         """
-        pf, xedges, yedges = \
-            self.bin(self.x, self.y, bin_size_cm=bin_size_cm, plot=False,
-                     weights=self.neural_data[neuron])
+        pf, xedges, yedges = spatial_bin(
+            self.x,
+            self.y,
+            bin_size_cm=bin_size_cm,
+            plot=False,
+            weights=self.neural_data[neuron],
+            one_dim=self.one_dim,
+        )
 
         # Normalize by occupancy.
         pf = pf / self.occupancy_map
@@ -97,10 +102,10 @@ class PlaceFields():
             if ax is None:
                 fig, ax = plt.subplots()
 
-            ax.imshow(pf, origin='lower')
+            ax.imshow(pf, origin="lower")
 
         return pf
 
 
-if __name__ == '__main__':
-    mouse = 'G132'
+if __name__ == "__main__":
+    mouse = "G132"
