@@ -506,16 +506,16 @@ def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
     if not isinstance(assembly_act, list):
         assembly_act = [assembly_act]
 
-        # If colors are not specified, use defaults.
-        if colors is None:
-            colors = util.distinct_colors(assembly_act[0])
+    # If colors are not specified, use defaults.
+    if colors is None:
+        colors = util.distinct_colors(assembly_act[0])
 
-        # spiking should already be a list. Let's also check that it's a list
-        # that's the same size as assembly_act. If not, it's probably a list
-        # of a single session so package it into a list.
-        if len(spiking) != len(assembly_act):
-            spiking = [spiking]
-            colors = [colors]
+    # spiking should already be a list. Let's also check that it's a list
+    # that's the same size as assembly_act. If not, it's probably a list
+    # of a single session so package it into a list.
+    if len(spiking) != len(assembly_act):
+        spiking = [spiking]
+        colors = [colors]
 
     # Get color for each assembly.
     uniq_colors = util.ordered_unique(colors[0])
