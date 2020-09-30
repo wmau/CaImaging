@@ -87,14 +87,14 @@ class PlaceFields:
         ---
         pf: (x,y) array, 2d histogram of position weighted by activity.
         """
-        pf, xedges, yedges = spatial_bin(
+        pf = spatial_bin(
             self.x,
             self.y,
             bin_size_cm=bin_size_cm,
             plot=False,
             weights=self.neural_data[neuron],
             one_dim=self.one_dim,
-        )
+        )[0]
 
         # Normalize by occupancy.
         pf = pf / self.occupancy_map

@@ -143,6 +143,15 @@ def project_image(vpath, projection_type='min',
     return proj
 
 
+def threshold_S(S, std_thresh=1):
+    std = np.nanstd(S, axis=1)
+    m = np.nanmean(S, axis=1)
+
+    thresh = np.tile(np.expand_dims(m + std_thresh*std, axis=0).T, [1, S.shape[1]])
+
+    return np.asarray(S > thresh, dtype=int)
+
+
 def open_minian(dpath, fname='minian', backend='zarr', chunks=None):
     """
     Opens minian outputs.
