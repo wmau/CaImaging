@@ -131,14 +131,14 @@ class CellRegObj:
         # Matlab indexes starting from 1. Correct this for Python.
         # Then NaN out the unmatched cells.
         match_map = cell_to_index_map - 1
-        match_map[match_map == -1] = np.nan
+        match_map[match_map == -1] = -9999
 
         # Convert to DataFrame and make the column names the sessions.
         assert match_map.shape[1] == len(self.sessions), "Sessions don't match."
         match_map = pd.DataFrame(match_map)
         match_map.columns = self.sessions
 
-        return match_map.astype('Int64')
+        return match_map.astype('int')
 
     def process_spatial_footprints(self):
         # Get the spatial footprints after translations.
@@ -271,11 +271,11 @@ def trim_map(cell_map, cols, detected='everyday'):
 
     # Eliminate neurons that were not detected on every session.
     if detected == 'everyday':
-        neurons_detected = (~trimmed_map.isnull()).all(axis=1)
+        neurons_detected = (trimmed_map!=-9999).all(axis=1)
     elif detected == 'either_day':
-        neurons_detected = (~trimmed_map.isnull()).any(axis=1)
+        neurons_detected = (trimmed_map!=-9999).any(axis=1)
     elif detected == 'first_day':
-        neurons_detected = ~trimmed_map[trimmed_map.columns[0]].isnull()
+        neurons_detected = trimmed_map[trimmed_map.columns[0]]!=-9999
     else:
         raise TypeError('Invalid value for detected')
 
@@ -306,15 +306,15 @@ def rearrange_neurons(cell_map, neural_data):
         cell_map = np.expand_dims(cell_map, 1)
     neural_data = [neural_data] if not isinstance(neural_data, list) else neural_data
 
-    nan_as_int = -2147483648
-    if not nan_as_int in cell_map:
+    missing = -9999
+    if not missing in cell_map:
         # Do a simple rearrangement of rows based on mappings.
         rearranged = []
         for n, session in enumerate(neural_data):
             rearranged.append(session[cell_map[:, n]])
 
     else:
-        # Catches cases where -1s (non-matched neurons) are in cell_map.
+        # Catches cases where -9999s (non-matched neurons) are in cell_map.
         # In this case, iterate through each cell_map column (session)
         # and then iterate through each neuron. Grab it from neural_data
         # if it exists, otherwise, fill it with zeros.
@@ -328,7 +328,7 @@ def rearrange_neurons(cell_map, neural_data):
             # Be sure to only grab neurons if cell_map value is > -1.
             # Otherwise, it will take the last neuron (-1).
             for m, neuron in enumerate(cell_map[:, n]):
-                if neuron > nan_as_int:
+                if neuron > missing:
                     rearranged_session[m] = session[neuron]
 
             # Append rearranged matrix with paddded zeros.
