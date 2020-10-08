@@ -265,9 +265,9 @@ def trim_map(cell_map, cols, detected='everyday'):
         of cols.
 
     """
-    # Take only specified columns.
+    # Take only specified columns. Need to be able to rearrange sessions to not be in sorted order!
     sessions = get_cellmap_columns(cell_map, cols)
-    trimmed_map = cell_map.loc[:, sessions]
+    trimmed_map = cell_map[sessions]
 
     # Eliminate neurons that were not detected on every session.
     if detected == 'everyday':

@@ -105,29 +105,6 @@ def get_session_folders(mouse_folder):
     return folders
 
 
-def batch_concat_behavior(folder, destination):
-    session_folders = get_session_folders(folder)
-
-    for session in session_folders:
-        fname = concat_avis(session, fname=None,
-                            pattern='behavCam*.avi')
-
-        split_path = os.path.split(os.path.split(session)[0])
-        session_id = split_path[1]
-        mouse = os.path.split(split_path[0])[1]
-        new_fname = os.path.join(destination, mouse + '_'
-                                 + session_id + '.avi')
-
-        if not os.path.exists(new_fname):
-            print(f'Attempting to copy {new_fname}.')
-            shutil.copyfile(fname, new_fname)
-            print(' ')
-            print(f'{new_fname} copied successfully.')
-        else:
-            print(f'{new_fname} already exists!')
-
-
-
 def make_bins(data, samples_per_bin, axis=1):
     """
     Make bins determined by how many samples per bin.
@@ -453,50 +430,6 @@ def find_closest(array, value, sorted=False):
 
         return idx, array[idx]
 
-
-# def get_data_paths(dir, pattern_dict, paths=None, subfolders=None,
-#                    files=None):
-#     if subfolders is None:
-#         subfolders = []
-#     if files is None:
-#         files = []
-#     keys_for_directories = ['minian']
-#     keys = pattern_dict.keys()
-#
-#     # Segregate pattern mapping dict into paths that correspond to
-#     # files versus folders.
-#     dir_dict = {key: re.compile(pattern_dict[key])
-#                 for key in keys
-#                 if key in keys_for_directories}
-#     file_dict = {key: re.compile(pattern_dict[key])
-#                  for key in keys
-#                  if key not in keys_for_directories}
-#
-#     if paths is None:
-#         paths = dict()
-#     for f in os.scandir(dir):
-#         if f.is_dir():
-#             subfolders.append(f.path)
-#
-#             for key, pattern in dir_dict.items():
-#                 if pattern.match(f.path):
-#                     paths[key] = f.path
-#
-#         if f.is_file():
-#             files.append(f.path)
-#             for key, pattern in file_dict.items():
-#                 if pattern.match(f.path):
-#                     paths[key] = f.path
-#
-#     for dir in list(subfolders):
-#         paths, sf, f = get_data_paths(dir, pattern_dict, paths,
-#                                       subfolders, files)
-#         subfolders.extend(sf)
-#         files.extend(f)
-#
-#
-#     return paths, subfolders, files
-#
 
 def get_data_paths(session_folder, pattern_dict):
     paths = {}
