@@ -11,7 +11,7 @@ import pandas as pd
 
 
 class SpatialFootprints():
-    def __init__(self, mouse_path):
+    def __init__(self, mouse_path, session_folder_up_n_levels=-3):
         """
         Class that handles spatial footprint-related stuff. Currently only
         makes the .mat file that gets fed into Ziv Lab's CellReg Matlab package.
@@ -28,7 +28,8 @@ class SpatialFootprints():
         # Define paths.
         self.mouse_path = mouse_path
         self.session_paths = [folder.parent for folder in Path(self.mouse_path).rglob('minian')]
-        self.session_numbers = [folder.parts[-2] for folder in self.session_paths]
+        self.session_numbers = [folder.parts[session_folder_up_n_levels]
+                                for folder in self.session_paths]
 
     def make_mat(self, save_path=None):
         """
