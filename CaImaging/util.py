@@ -437,6 +437,7 @@ def get_data_paths(session_folder, pattern_dict):
         paths[type] = []
 
     for root, dirs, files in os.walk(session_folder):
+        dirs[:] = [d for d in dirs if not re.match("^.*\.zarr$", d)]
         for type, pattern in pattern_dict.items():
             for file in files:
                 if re.match(pattern, file):
