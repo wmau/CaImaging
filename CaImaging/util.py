@@ -19,9 +19,14 @@ tkroot.withdraw()
 from tkinter import filedialog
 
 
-def concat_avis(path=None, pattern='behavCam*.avi',
-                fname=None, fps=30, isColor=True,
-                delete_original_files=False):
+def concat_avis(
+    path=None,
+    pattern="behavCam*.avi",
+    fname=None,
+    fps=30,
+    isColor=True,
+    delete_original_files=False,
+):
     """
     Concatenates behavioral avi files for ezTrack.
 
@@ -43,35 +48,33 @@ def concat_avis(path=None, pattern='behavCam*.avi',
     files = natsorted(glob.glob(os.path.join(path, pattern)))
 
     if not files:
-        print(f'No files matching {pattern}')
+        print(f"No files matching {pattern}")
         return
 
     # Get width and height.
     cap = cv2.VideoCapture(files[0])
-    size = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), \
-           int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    size = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(
+        cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    )
 
     # File name for the final avi.
     if fname is None:
-        final_clip_name = os.path.join(path, 'Merged.avi')
+        final_clip_name = os.path.join(path, "Merged.avi")
     else:
         final_clip_name = fname
     if os.path.exists(final_clip_name):
-        print('File already exists!')
+        print("File already exists!")
         return final_clip_name
 
     # Define writer.
     fourcc = 0
-    writer = cv2.VideoWriter(final_clip_name, fourcc,
-                             fps, size, isColor=isColor)
-
-
+    writer = cv2.VideoWriter(final_clip_name, fourcc, fps, size, isColor=isColor)
 
     for file in files:
-        print(f'Processing {file}')
+        print(f"Processing {file}")
         cap = cv2.VideoCapture(file)
-        cap.set(1,0)                # Go to frame 0.
-        cap_max = int(cap.get(7))   #7 is the index for total frames.
+        cap.set(1, 0)  # Go to frame 0.
+        cap_max = int(cap.get(7))  # 7 is the index for total frames.
 
         # Loop through all the frames.
         for frame_num in range(cap_max):
@@ -88,19 +91,19 @@ def concat_avis(path=None, pattern='behavCam*.avi',
         cap.release()
 
     writer.release()
-    print(f'Writing {final_clip_name}')
+    print(f"Writing {final_clip_name}")
 
     if delete_original_files:
-        print('Deleting original files.')
+        print("Deleting original files.")
         [os.remove(file) for file in files]
 
     return final_clip_name
 
 
 def get_session_folders(mouse_folder):
-    folders = [folder for folder in
-               Path(mouse_folder).rglob('H*_M*_S*')
-               if folder.is_dir()]
+    folders = [
+        folder for folder in Path(mouse_folder).rglob("H*_M*_S*") if folder.is_dir()
+    ]
 
     return folders
 
@@ -161,7 +164,7 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
     data = np.round(data, 3)
 
     # Group data into bins.
-    bins = make_bins(data, bin_size_in_seconds*fps)
+    bins = make_bins(data, bin_size_in_seconds * fps)
     binned = np.split(data, bins, axis=1)
 
     # Sum the number of "S" per bin.
@@ -170,8 +173,9 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
     return np.vstack(summed).T
 
 
-def get_transient_timestamps(neural_data, thresh_type='eps',
-                             do_zscore=True, std_thresh=3):
+def get_transient_timestamps(
+    neural_data, thresh_type="eps", do_zscore=True, std_thresh=3
+):
     """
     Converts an array of continuous time series (e.g., traces or S)
     into lists of timestamps where activity exceeds some threshold.
@@ -196,24 +200,22 @@ def get_transient_timestamps(neural_data, thresh_type='eps',
     """
     # Compute thresholds for each neuron.
     neural_data = np.asarray(neural_data, dtype=np.float32)
-    if thresh_type == 'eps':
+    if thresh_type == "eps":
         thresh = np.repeat(np.finfo(np.float32).eps, neural_data.shape[0])
     else:
         if do_zscore:
             stds = np.std(neural_data, axis=1)
             means = np.mean(neural_data, axis=1)
-            thresh = means + std_thresh*stds
+            thresh = means + std_thresh * stds
         else:
             thresh = np.repeat(std_thresh, neural_data.shape[0])
 
     # Get event times and magnitudes.
-    bool_arr = neural_data > np.tile(thresh,[neural_data.shape[1], 1]).T
+    bool_arr = neural_data > np.tile(thresh, [neural_data.shape[1], 1]).T
 
-    event_times = [np.where(neuron > t)[0] for neuron, t
-                   in zip(neural_data, thresh)]
+    event_times = [np.where(neuron > t)[0] for neuron, t in zip(neural_data, thresh)]
 
-    event_mags = [neuron[neuron > t] for neuron, t
-                  in zip(neural_data, thresh)]
+    event_mags = [neuron[neuron > t] for neuron, t in zip(neural_data, thresh)]
 
     return event_times, event_mags, bool_arr
 
@@ -232,6 +234,7 @@ def distinct_colors(n):
         Each str is a hex code corresponding to a color.
 
     """
+
     def MidSort(lst):
         if len(lst) <= 1:
             return lst
@@ -239,11 +242,14 @@ def distinct_colors(n):
         ret = [lst.pop(i)]
         left = MidSort(lst[0:i])
         right = MidSort(lst[i:])
-        interleaved = [item for items in itertools.zip_longest(left, right)
-                       for item in items if item != None]
+        interleaved = [
+            item
+            for items in itertools.zip_longest(left, right)
+            for item in items
+            if item != None
+        ]
         ret.extend(interleaved)
         return ret
-
 
     # Build list of points on a line (0 to 255) to use as color 'ticks'
     max_ = 255
@@ -266,7 +272,7 @@ def distinct_colors(n):
                     if total >= n:
                         break
                     c = "#%02X%02X%02X" % (points[c0], points[c1], points[c2])
-                    if c not in colors and c != '#FFFFFF':
+                    if c not in colors and c != "#FFFFFF":
                         colors.append(c)
                         total += 1
 
@@ -295,7 +301,7 @@ def ordered_unique(sequence):
     return [x for x in sequence if not (x in seen or seen_add(x))]
 
 
-def filter_sessions(session, key, keywords, mode='all'):
+def filter_sessions(session, key, keywords, mode="all"):
     """
     Filters sessions based on keywords.
 
@@ -331,17 +337,16 @@ def filter_sessions(session, key, keywords, mode='all'):
 
     keywords = [keyword.lower() for keyword in keywords]
 
-    if mode == 'all':
+    if mode == "all":
         filtered = session[session[key].isin(keywords).all(axis=1)]
 
-    elif mode == 'any':
+    elif mode == "any":
         filtered = session[session[key].isin(keywords).any(axis=1)]
 
     else:
-        raise ValueError(f'{mode} not supported. Use any or all.')
+        raise ValueError(f"{mode} not supported. Use any or all.")
 
     return filtered
-
 
 
 def consecutive_dist(x, axis=0, zero_pad=False):
@@ -358,7 +363,7 @@ def consecutive_dist(x, axis=0, zero_pad=False):
     dists: array-like, distances.
     """
     delta = np.diff(x, axis=axis)
-    dists = np.hypot(delta[:,0], delta[:,1])
+    dists = np.hypot(delta[:, 0], delta[:, 1])
 
     if zero_pad:
         dists = np.insert(dists, 0, 0)
@@ -366,7 +371,7 @@ def consecutive_dist(x, axis=0, zero_pad=False):
     return dists
 
 
-def add_arrow(line, position=None, direction='right', size=15, color=None):
+def add_arrow(line, position=None, direction="right", size=15, color=None):
     """
     add an arrow to a line.
 
@@ -386,16 +391,17 @@ def add_arrow(line, position=None, direction='right', size=15, color=None):
         position = xdata.mean()
     # find closest index
     start_ind = np.argmin(np.absolute(xdata - position))
-    if direction == 'right':
+    if direction == "right":
         end_ind = start_ind + 1
     else:
         end_ind = start_ind - 1
 
-    line.axes.annotate('',
+    line.axes.annotate(
+        "",
         xytext=(xdata[start_ind], ydata[start_ind]),
         xy=(xdata[end_ind], ydata[end_ind]),
         arrowprops=dict(arrowstyle="->", color=color),
-        size=size
+        size=size,
     )
 
 
@@ -421,7 +427,10 @@ def find_closest(array, value, sorted=False):
     """
     if sorted:
         idx = np.searchsorted(array, value, side="left")
-        if idx > 0 and (idx == len(array) or math.fabs(value - array[idx - 1]) < math.fabs(value - array[idx])):
+        if idx > 0 and (
+            idx == len(array)
+            or math.fabs(value - array[idx - 1]) < math.fabs(value - array[idx])
+        ):
             return idx - 1, array[idx - 1]
         else:
             return idx, array[idx]
@@ -448,17 +457,16 @@ def get_data_paths(session_folder, pattern_dict):
 
                     # open_minian input is the root, not the full path
                     # to the minian folder.
-                    if type == 'minian':
+                    if type == "minian":
                         paths[type].append(root)
                     else:
-                        paths[type].append(os.path.join(root,
-                                                        directory))
+                        paths[type].append(os.path.join(root, directory))
 
     for type, pattern in pattern_dict.items():
         if not paths[type]:
-            print(f'{type} not found for {session_folder}.')
+            print(f"{type} not found for {session_folder}.")
         elif len(paths[type]) > 1:
-            print(f'Multiple {type} files found for {session_folder}.')
+            print(f"Multiple {type} files found for {session_folder}.")
         elif len(paths[type]) == 1:
             paths[type] = paths[type][0]
 
@@ -466,16 +474,18 @@ def get_data_paths(session_folder, pattern_dict):
 
 
 class ScrollPlot:
-    def __init__(self,
-                 plot_function,
-                 nrows=1,
-                 ncols=1,
-                 titles=None,
-                 figsize=(8, 6),
-                 current_position=0,
-                 vid_fpath=None,
-                 subplot_kw={'projection': 'rectilinear'},
-                 **kwargs):
+    def __init__(
+        self,
+        plot_function,
+        nrows=1,
+        ncols=1,
+        titles=None,
+        figsize=(8, 6),
+        current_position=0,
+        vid_fpath=None,
+        subplot_kw={"projection": "rectilinear"},
+        **kwargs,
+    ):
         """
         Allows you to plot basically anything iterative and scroll
         through it.
@@ -518,10 +528,9 @@ class ScrollPlot:
             self.vid.set(1, self.current_position)
 
         # Make figure.
-        self.fig, (self.ax) = plt.subplots(self.nrows,
-                                           self.ncols,
-                                           figsize=self.figsize,
-                                           subplot_kw=subplot_kw)
+        self.fig, (self.ax) = plt.subplots(
+            self.nrows, self.ncols, figsize=self.figsize, subplot_kw=subplot_kw
+        )
 
         # Plot then apply title.
         self.plot_function(self)
@@ -531,19 +540,19 @@ class ScrollPlot:
             pass
 
         # Connect to keyboard.
-        self.fig.canvas.mpl_connect('key_press_event',
-                                    lambda event: self.update_plots(event))
-
+        self.fig.canvas.mpl_connect(
+            "key_press_event", lambda event: self.update_plots(event)
+        )
 
     def scroll(self, event):
         """
         Scrolls backwards or forwards using arrow keys. Quit with Esc.
         """
-        if event.key == 'right' and self.current_position < self.last_position:
+        if event.key == "right" and self.current_position < self.last_position:
             self.current_position += 1
-        elif event.key == 'left' and self.current_position > 0:
+        elif event.key == "left" and self.current_position > 0:
             self.current_position -= 1
-        elif event.key == 'escape':
+        elif event.key == "escape":
             plt.close(self.fig)
 
     def update_plots(self, event):
@@ -578,7 +587,7 @@ def disp_frame(ScrollObj):
 
     """
     # Check that ScrollPlot object has all these attrs.
-    attrs = ['vid', 'x', 'y']
+    attrs = ["vid", "x", "y"]
     check_attrs(ScrollObj, attrs)
 
     # Read the frame.
@@ -587,14 +596,18 @@ def disp_frame(ScrollObj):
         ret, frame = ScrollObj.vid.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     except:
-        raise ValueError('Something went wrong with reading video.')
+        raise ValueError("Something went wrong with reading video.")
 
     # Plot the frame and position.
     ScrollObj.ax.imshow(frame)
     ScrollObj.ax.set_autoscale_on(False)
-    ScrollObj.ax.scatter(ScrollObj.x[ScrollObj.current_position],
-                         ScrollObj.y[ScrollObj.current_position],
-                         marker='+', s=80, c='r')
+    ScrollObj.ax.scatter(
+        ScrollObj.x[ScrollObj.current_position],
+        ScrollObj.y[ScrollObj.current_position],
+        marker="+",
+        s=80,
+        c="r",
+    )
 
     # Find limit.
     ScrollObj.last_position = int(ScrollObj.vid.get(7)) - 1
@@ -602,7 +615,7 @@ def disp_frame(ScrollObj):
 
 def check_attrs(obj, attrs):
     for attr in attrs:
-        assert hasattr(obj, attr), (attr + ' missing')
+        assert hasattr(obj, attr), attr + " missing"
 
 
 def sync_cameras(timestamps, miniscope_cam=6, behav_cam=2):
@@ -632,18 +645,16 @@ def sync_cameras(timestamps, miniscope_cam=6, behav_cam=2):
     elif type(timestamps) == pd.DataFrame:
         ts = timestamps
     else:
-        raise TypeError('timestamps must be a DataFrame or a path.')
+        raise TypeError("timestamps must be a DataFrame or a path.")
 
-    #cam_change = behav_cam - miniscope_cam
+    # cam_change = behav_cam - miniscope_cam
     # ts["change_point"] = ts["camNum"].diff()
-    ts["ts_behav"] = np.where(ts["camNum"] == behav_cam,
-                              ts["sysClock"], np.nan)
+    ts["ts_behav"] = np.where(ts["camNum"] == behav_cam, ts["sysClock"], np.nan)
     ts["ts_forward"] = ts["ts_behav"].fillna(method="ffill")
     ts["ts_backward"] = ts["ts_behav"].fillna(method="bfill")
     ts["diff_forward"] = np.absolute(ts["sysClock"] - ts["ts_forward"])
     ts["diff_backward"] = np.absolute(ts["sysClock"] - ts["ts_backward"])
-    ts["fm_behav"] = np.where(ts["camNum"] == behav_cam,
-                              ts["frameNum"], np.nan)
+    ts["fm_behav"] = np.where(ts["camNum"] == behav_cam, ts["frameNum"], np.nan)
     ts["fm_forward"] = ts["fm_behav"].fillna(method="ffill")
     ts["fm_backward"] = ts["fm_behav"].fillna(method="bfill")
     ts["fmCam1"] = np.where(
@@ -651,9 +662,9 @@ def sync_cameras(timestamps, miniscope_cam=6, behav_cam=2):
     )
     ts_map = (
         ts[ts["camNum"] == miniscope_cam][["frameNum", "fmCam1"]]
-            .dropna()
-            .rename(columns=dict(frameNum="fmCam0"))
-            .astype(dict(fmCam1=int))
+        .dropna()
+        .rename(columns=dict(frameNum="fmCam0"))
+        .astype(dict(fmCam1=int))
     )
 
     ts_map["fmCam0"] = ts_map["fmCam0"] - 1
@@ -676,30 +687,34 @@ def sync_cameras_v4(miniscope_file, behavior_file):
         Full path to behavior timeStamps.csv.
     """
     # Read the csv.
-    ts = {'miniscope': pd.read_csv(miniscope_file),
-          'behavior': pd.read_csv(behavior_file)
-          }
+    ts = {
+        "miniscope": pd.read_csv(miniscope_file),
+        "behavior": pd.read_csv(behavior_file),
+    }
 
     # Insert a 'camNum' column.
-    for camera in ['miniscope', 'behavior']:
-        ts[camera].insert(0, 'Camera', camera)
+    for camera in ["miniscope", "behavior"]:
+        ts[camera].insert(0, "Camera", camera)
 
     # Combine the behavior and miniscope timestamp data to mimic
     # the old (v3) acquisition software's timestamps.dat.
     # Sort by timestamps, then rename the columns to the old format.
-    combined = pd.concat([ts['miniscope'], ts['behavior']])
-    sorted_data = combined.sort_values('Time Stamp (ms)')
-    sorted_data = sorted_data.rename(columns={'Camera': 'camNum',
-                                              'Frame Number': 'frameNum',
-                                              'Time Stamp (ms)': 'sysClock'})
+    combined = pd.concat([ts["miniscope"], ts["behavior"]])
+    sorted_data = combined.sort_values("Time Stamp (ms)")
+    sorted_data = sorted_data.rename(
+        columns={
+            "Camera": "camNum",
+            "Frame Number": "frameNum",
+            "Time Stamp (ms)": "sysClock",
+        }
+    )
 
     # Arbitrarily assign numbers to miniscope and behavior cams to
     # mimic device ID in old software.
-    sorted_data.loc[sorted_data['camNum'] == 'miniscope', 'camNum'] = 0
-    sorted_data.loc[sorted_data['camNum'] == 'behavior', 'camNum'] = 1
+    sorted_data.loc[sorted_data["camNum"] == "miniscope", "camNum"] = 0
+    sorted_data.loc[sorted_data["camNum"] == "behavior", "camNum"] = 1
 
-    ts_map, ts = sync_cameras(sorted_data, miniscope_cam=0,
-                              behav_cam=1)
+    ts_map, ts = sync_cameras(sorted_data, miniscope_cam=0, behav_cam=1)
 
     # New software is 0 indexed, rather than 1-indexed.
     # sync_cameras() corrects for 1-indexing. The lines below undoes
@@ -712,8 +727,7 @@ def sync_cameras_v4(miniscope_file, behavior_file):
     return ts_map, ts
 
 
-def sync_data(behavior_data, minian_path, timestamp_path,
-              miniscope_cam=6, behav_cam=1):
+def sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=6, behav_cam=1):
     """
     Synchronizes minian and behavior time series.
 
@@ -749,25 +763,30 @@ def sync_data(behavior_data, minian_path, timestamp_path,
     elif type(behavior_data) == pd.DataFrame:
         behavior = behavior_data
     else:
-        raise TypeError('behavior data must be str or DataFrame.')
+        raise TypeError("behavior data must be str or DataFrame.")
 
     minian = open_minian(minian_path)
 
     # Match up timestamps from minian and behavior. Use minian
     # as the reference.
     if type(timestamp_path) == str:
-        ts_map, ts = sync_cameras(timestamp_path,
-                                  miniscope_cam=miniscope_cam,
-                                  behav_cam=behav_cam)
+        ts_map, ts = sync_cameras(
+            timestamp_path, miniscope_cam=miniscope_cam, behav_cam=behav_cam
+        )
     elif type(timestamp_path) == list:
-        miniscope_file = [folder for folder in timestamp_path
-                          if 'Miniscope' in
-                          os.path.split(folder)[0]][0]
-        behavior_file = [folder for folder in timestamp_path
-                         if 'BehavCam' in os.path.split(folder)[0]][0]
+        miniscope_file = [
+            folder
+            for folder in timestamp_path
+            if "Miniscope" in os.path.split(folder)[0]
+        ][0]
+        behavior_file = [
+            folder
+            for folder in timestamp_path
+            if "BehavCam" in os.path.split(folder)[0]
+        ][0]
         ts_map, ts = sync_cameras_v4(miniscope_file, behavior_file)
     else:
-        raise TypeError('timestamp_path must be str or list.')
+        raise TypeError("timestamp_path must be str or list.")
 
     miniscope_frames = np.asarray(minian.C.frame)
     miniscope_frames = miniscope_frames[miniscope_frames <= ts_map.index[-1]]
@@ -778,9 +797,11 @@ def sync_data(behavior_data, minian_path, timestamp_path,
     synced_behavior.reset_index(drop=True, inplace=True)
 
     # Calcium data.
-    ca_data = {'C': np.asarray(minian.C.sel(frame=miniscope_frames)),
-               'S': np.asarray(minian.S.sel(frame=miniscope_frames)),
-               'A': np.asarray(minian.A)}
+    ca_data = {
+        "C": np.asarray(minian.C.sel(frame=miniscope_frames)),
+        "S": np.asarray(minian.S.sel(frame=miniscope_frames)),
+        #'A': np.asarray(minian.A)
+    }
 
     return synced_behavior, ca_data, behavior
 
@@ -798,11 +819,11 @@ def compute_z_from(arr, mu, sigma):
     of an array. Useful for when you want to take z-score of a subset
     of an array while using the whole array's statistics.
     """
-    reshape_and_tile = lambda x: np.tile(x.reshape(-1,1), (1, arr.shape[1]))
+    reshape_and_tile = lambda x: np.tile(x.reshape(-1, 1), (1, arr.shape[1]))
     mu = reshape_and_tile(mu)
     sigma = reshape_and_tile(sigma)
 
-    z = (arr - mu)/sigma
+    z = (arr - mu) / sigma
 
     return z
 
@@ -811,11 +832,11 @@ def smooth(a, window_size):
     # a: NumPy 1-D array containing the data to be smoothed
     # WSZ: smoothing window size needs, which must be odd number,
     # as in the original MATLAB implementation
-    out0 = np.convolve(a,np.ones(window_size,dtype=int),'valid')/window_size
-    r = np.arange(1,window_size-1,2)
-    start = np.cumsum(a[:window_size-1])[::2]/r
-    stop = (np.cumsum(a[:-window_size:-1])[::2]/r)[::-1]
-    return np.concatenate((  start , out0, stop  ))
+    out0 = np.convolve(a, np.ones(window_size, dtype=int), "valid") / window_size
+    r = np.arange(1, window_size - 1, 2)
+    start = np.cumsum(a[: window_size - 1])[::2] / r
+    stop = (np.cumsum(a[:-window_size:-1])[::2] / r)[::-1]
+    return np.concatenate((start, out0, stop))
 
 
 def smooth_array(a, window_size):
@@ -844,7 +865,7 @@ def sem(arr, axis=0):
     stds = np.nanstd(arr, axis=axis)
     n = np.sum(~np.isnan(arr), axis=axis)
 
-    standard_error = stds/np.sqrt(n)
+    standard_error = stds / np.sqrt(n)
 
     return standard_error
 
@@ -880,7 +901,7 @@ def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None):
 def chunk(lst, n):
     chunked = []
     for i in range(0, len(lst), n):
-        chunked.append(lst[i:i+n])
+        chunked.append(lst[i : i + n])
 
     return chunked
 
@@ -896,7 +917,7 @@ def contiguous_regions(condition):
 
     # Find the indicies of changes in "condition"
     d = np.diff(condition)
-    idx, = d.nonzero()
+    (idx,) = d.nonzero()
 
     # We need to start things after the change in "condition". Therefore,
     # we'll shift the index by 1 to the right.
@@ -908,14 +929,14 @@ def contiguous_regions(condition):
 
     if condition[-1]:
         # If the end of condition is True, append the length of the array
-        idx = np.r_[idx, condition.size] # Edit
+        idx = np.r_[idx, condition.size]  # Edit
 
     # Reshape the result into two columns
-    idx.shape = (-1,2)
+    idx.shape = (-1, 2)
     return idx
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
     # behavior_data = os.path.join(folder, 'PreprocessedBehavior.csv')
     # minian_path = folder
@@ -924,9 +945,8 @@ if __name__ == '__main__':
     # sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=2,
     #           behav_cam=0)
 
-    behavior_path = r'Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\G11LTD2Merged_LocationOutput.csv'
-    minian_path = r'Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5'
-    timestamp_path = r'Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\timestamp.dat'
+    behavior_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\G11LTD2Merged_LocationOutput.csv"
+    minian_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5"
+    timestamp_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\timestamp.dat"
 
-    sync_data(behavior_path, minian_path, timestamp_path,
-              miniscope_cam=2, behav_cam=0)
+    sync_data(behavior_path, minian_path, timestamp_path, miniscope_cam=2, behav_cam=0)

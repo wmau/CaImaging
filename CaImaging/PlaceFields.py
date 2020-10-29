@@ -7,7 +7,7 @@ plt.rcParams.update({"font.size": 12})
 
 
 class PlaceFields:
-    def __init__(self, x, y, neural_data, bin_size_cm=20, one_dim=False):
+    def __init__(self, x, y, neural_data, bin_size=20, one_dim=False):
         """
         Place field object.
 
@@ -19,8 +19,9 @@ class PlaceFields:
         self.x, self.y = x, y
         self.neural_data = neural_data
         self.one_dim = one_dim
+        self.bin_size = bin_size
 
-        self.make_occupancy_map(bin_size_cm=bin_size_cm, plot=False)
+        self.make_occupancy_map(plot=False)
 
     def plot_dots(
         self, neuron, std_thresh=2, pos_color="k", transient_color="r", ax=None
@@ -52,7 +53,7 @@ class PlaceFields:
         ax.scatter(self.x, self.y, s=3, c=pos_color)
         ax.scatter(self.x[supra_thresh], self.y[supra_thresh], s=3, c=transient_color)
 
-    def make_occupancy_map(self, bin_size_cm=20, plot=True, ax=None):
+    def make_occupancy_map(self, plot=True, ax=None):
         """
         Makes the occupancy heat cell_map of the animal.
 
@@ -63,7 +64,7 @@ class PlaceFields:
 
         """
         self.occupancy_map = spatial_bin(
-            self.x, self.y, bin_size_cm=bin_size_cm, plot=plot, one_dim=self.one_dim
+            self.x, self.y, bin_size_cm=self.bin_size, plot=plot, one_dim=self.one_dim
         )[0]
 
         if plot:
@@ -72,7 +73,7 @@ class PlaceFields:
 
             ax.imshow(self.occupancy_map, origin="lower")
 
-    def make_place_field(self, neuron, bin_size_cm=20, plot=True, ax=None):
+    def make_place_field(self, neuron, plot=True, ax=None):
         """
         Bins activity in space. Essentially a 2d histogram weighted by
         neural activity.
@@ -90,7 +91,7 @@ class PlaceFields:
         pf = spatial_bin(
             self.x,
             self.y,
-            bin_size_cm=bin_size_cm,
+            bin_size_cm=self.bin_size,
             plot=False,
             weights=self.neural_data[neuron],
             one_dim=self.one_dim,
