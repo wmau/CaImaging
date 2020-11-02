@@ -22,6 +22,21 @@ class PlaceFields:
         self.bin_size = bin_size
 
         self.make_occupancy_map(plot=False)
+        self.pfs = self.make_all_place_fields()
+
+
+    def make_all_place_fields(self):
+        """
+        Compute the spatial rate maps of all neurons.
+        
+        :return:
+        """
+        pfs = []
+        for neuron in range(self.neural_data.shape[0]):
+            pfs.append(self.make_place_field(neuron, plot=False))
+
+        return pfs
+
 
     def plot_dots(
         self, neuron, std_thresh=2, pos_color="k", transient_color="r", ax=None
