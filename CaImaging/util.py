@@ -487,20 +487,20 @@ class ScrollPlot:
         **kwargs,
     ):
         """
-        Allows you to plot basically anything iterative and scroll
+        Allows you to show_plot basically anything iterative and scroll
         through it.
 
         :parameters
         ---
         plot_function: function
             This function should be written specifically to draw from
-            attrs in this class and plot them.
+            attrs in this class and show_plot them.
 
         nrows, ncols: ints
             Number of rows or columns in subplots.
 
         titles: list of strs
-            Should be the same length as the data you want to plot.
+            Should be the same length as the data you want to show_plot.
 
         figsize: tuple
             Size of figure.
@@ -557,7 +557,7 @@ class ScrollPlot:
 
     def update_plots(self, event):
         """
-        Update the plot with new index.
+        Update the show_plot with new index.
         """
         try:
             for ax in self.fig.axes:
@@ -565,7 +565,7 @@ class ScrollPlot:
         except:
             self.ax.cla()
 
-        # Scroll then update plot.
+        # Scroll then update show_plot.
         self.scroll(event)
         self.plot_function(self)
         try:
@@ -872,7 +872,7 @@ def sem(arr, axis=0):
 
 def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None):
     """
-    Line plot with error bars except the error bars are filled in
+    Line show_plot with error bars except the error bars are filled in
     rather than the monstrosity from matplotlib.
 
     :parameters

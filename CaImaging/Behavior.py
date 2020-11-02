@@ -112,7 +112,7 @@ def make_tracking_video(
 
 
 def spatial_bin(
-    x, y, bin_size_cm=20, plot=False, weights=None, ax=None, bins=None, one_dim=False
+    x, y, bin_size_cm=20, show_plot=False, weights=None, ax=None, bins=None, one_dim=False
 ):
     """
     Spatially bins the position data.
@@ -125,7 +125,7 @@ def spatial_bin(
     bin_size_cm: float
         Bin size in centimeters.
 
-    plot: bool
+    show_plot: bool
         Flag for plotting.
 
     weights: array-like
@@ -157,7 +157,7 @@ def spatial_bin(
 
         H, edges = np.histogram(x, bins, weights=weights)
 
-        if plot:
+        if show_plot:
             if ax is None:
                 fig, ax = plt.subplots()
 
@@ -179,7 +179,7 @@ def spatial_bin(
         # Do the binning.
         H, xedges, yedges = np.histogram2d(y, x, bins, weights=weights)
 
-        if plot:
+        if show_plot:
             if ax is None:
                 fig, ax = plt.subplots()
 
