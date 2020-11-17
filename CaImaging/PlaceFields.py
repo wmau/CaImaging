@@ -1,13 +1,20 @@
 import numpy as np
 from CaImaging.Behavior import spatial_bin
 import matplotlib.pyplot as plt
+from random import randint
+import multiprocessing as mp
+from joblib import Parallel, delayed
+from tqdm import tqdm
+from concurrent import futures
 
 plt.rcParams["pdf.fonttype"] = 42
 plt.rcParams.update({"font.size": 12})
 
 
 class PlaceFields:
-    def __init__(self, x, y, neural_data, bin_size=20, one_dim=False):
+    def __init__(
+        self, x, y, neural_data, bin_size=20, one_dim=False, shuffle_test=False
+    ):
         """
         Place field object.
 
@@ -23,7 +30,12 @@ class PlaceFields:
 
         self.occupancy_map = self.make_occupancy_map(show_plot=False)
         self.pfs = self.make_all_place_fields()
-
+        self.spatial_information = [
+            spatial_information(pf, self.occupancy_map) for pf in self.pfs
+        ]
+        self.pf_centers = self.find_pf_centers()
+        if shuffle_test:
+            self.pvals = self.assess_spatial_sig_parallel()
 
     def make_all_place_fields(self):
         """
@@ -37,31 +49,46 @@ class PlaceFields:
 
         return pfs
 
+    def make_snake_plot(self, order='sorted', neurons='all', normalize=True):
+        if neurons == 'all':
+            neurons = [n for n in range(self.neural_data.shape[0])]
+        pfs = self.pfs[neurons]
 
-    def assess_stat_sig(self):
-        SI = []
-        SI2 = []
-        for pf in self.pfs:
-            SI.append(spatial_information(pf, self.occupancy_map))
-            SI2.append(spatial_information2(pf, self.occupancy_map))
+        if order == 'sorted':
+            order = np.argsort(self.pf_centers[neurons])
+
+        if normalize:
+            pfs = pfs / pfs.max(axis=1)[:, np.newaxis]
 
         fig, ax = plt.subplots()
-        ax.scatter(SI, SI2)
-        lims = [
-            np.min([ax.get_xlim(), ax.get_ylim()]),
-            # min of both axes
-            np.max([ax.get_xlim(), ax.get_ylim()]),
-            # max of both axes
-        ]
-        ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
-        ax.set_aspect('equal')
-        ax.set_xlim(lims)
-        ax.set_ylim(lims)
-        for i, (x, y) in enumerate(zip(SI, SI2)):
-            ax.annotate(i, (x, y))
-        fig.show()
+        ax.imshow(pfs[order])
 
-        pass
+
+    def find_pf_centers(self):
+        centers = [np.argmax(pf) for pf in self.pfs]
+
+        return centers
+
+    def assess_spatial_sig(self, neuron, n_shuffles=500):
+        shuffled_SIs = []
+        for i in range(n_shuffles):
+            shuffled_pf = self.make_place_field(neuron, show_plot=False, shuffle=True)
+            shuffled_SIs.append(spatial_information(shuffled_pf, self.occupancy_map))
+
+        p_value = np.sum(self.spatial_information[neuron] < shuffled_SIs) / n_shuffles
+
+        return p_value
+
+    def assess_spatial_sig_parallel(self):
+        neurons = tqdm([n for n in range(self.neural_data.shape[0])])
+        n_cores = mp.cpu_count()
+        # with futures.ProcessPoolExecutor() as pool:
+        #     results = pool.map(self.assess_spatial_sig, neurons)
+        results = Parallel(n_jobs=n_cores)(
+            delayed(self.assess_spatial_sig)(i) for i in neurons
+        )
+
+        return results
 
     def plot_dots(
         self, neuron, std_thresh=2, pos_color="k", transient_color="r", ax=None
@@ -104,7 +131,11 @@ class PlaceFields:
 
         """
         occupancy_map = spatial_bin(
-            self.x, self.y, bin_size_cm=self.bin_size, show_plot=show_plot, one_dim=self.one_dim
+            self.x,
+            self.y,
+            bin_size_cm=self.bin_size,
+            show_plot=show_plot,
+            one_dim=self.one_dim,
         )[0]
 
         if show_plot:
@@ -115,9 +146,9 @@ class PlaceFields:
 
         return occupancy_map
 
-    def make_place_field(self, neuron, show_plot=True,
-                         normalize_by_occ=False,
-                         ax=None):
+    def make_place_field(
+        self, neuron, show_plot=True, normalize_by_occ=False, ax=None, shuffle=False
+    ):
         """
         Bins activity in space. Essentially a 2d histogram weighted by
         neural activity.
@@ -132,12 +163,18 @@ class PlaceFields:
         ---
         pf: (x,y) array, 2d histogram of position weighted by activity.
         """
+        if shuffle:
+            random_shift = randint(300, self.neural_data.shape[1])
+            neural_data = np.roll(self.neural_data[neuron], random_shift)
+        else:
+            neural_data = self.neural_data[neuron]
+
         pf = spatial_bin(
             self.x,
             self.y,
             bin_size_cm=self.bin_size,
             show_plot=False,
-            weights=self.neural_data[neuron],
+            weights=neural_data,
             one_dim=self.one_dim,
         )[0]
 
@@ -152,6 +189,7 @@ class PlaceFields:
             ax.imshow(pf, origin="lower")
 
         return pf
+
 
 # Adrien Peyrache's formula.
 # def spatial_information(tuning_curve, occupancy):
@@ -198,19 +236,22 @@ def spatial_information(tuning_curve, occupancy):
     occupancy = occupancy[occupancy > 0]
 
     # Find rate and mean rate.
-    rate = tuning_curve/occupancy
-    mrate = tuning_curve.sum()/occupancy.sum()
+    rate = tuning_curve / occupancy
+    mrate = tuning_curve.sum() / occupancy.sum()
 
     # Get occupancy probability.
-    prob = occupancy/occupancy.sum()
+    prob = occupancy / occupancy.sum()
 
     # Handle log2(0).
     index = rate > 0
 
     # Spatial information formula.
-    bits_per_spk = sum(prob[index] * (rate[index]/mrate) * np.log2(rate[index]/mrate))
+    bits_per_spk = sum(
+        prob[index] * (rate[index] / mrate) * np.log2(rate[index] / mrate)
+    )
 
     return bits_per_spk
+
 
 if __name__ == "__main__":
     mouse = "G132"
