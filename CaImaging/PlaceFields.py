@@ -25,6 +25,7 @@ class PlaceFields:
         """
         self.x, self.y = x, y
         self.neural_data = neural_data
+        self.n_neurons = neural_data.shape[0]
         self.one_dim = one_dim
         self.bin_size = bin_size
 
@@ -51,7 +52,7 @@ class PlaceFields:
 
     def make_snake_plot(self, order='sorted', neurons='all', normalize=True):
         if neurons == 'all':
-            neurons = [n for n in range(self.neural_data.shape[0])]
+            neurons = [n for n in range(self.n_neurons)]
         pfs = self.pfs[neurons]
 
         if order == 'sorted':
@@ -80,7 +81,7 @@ class PlaceFields:
         return p_value
 
     def assess_spatial_sig_parallel(self):
-        neurons = tqdm([n for n in range(self.neural_data.shape[0])])
+        neurons = tqdm([n for n in range(self.n_neurons)])
         n_cores = mp.cpu_count()
         # with futures.ProcessPoolExecutor() as pool:
         #     results = pool.map(self.assess_spatial_sig, neurons)
