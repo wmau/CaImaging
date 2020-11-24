@@ -5,7 +5,7 @@ from random import randint
 import multiprocessing as mp
 from joblib import Parallel, delayed
 from tqdm import tqdm
-from concurrent import futures
+from CaImaging.util import consecutive_dist
 
 plt.rcParams["pdf.fonttype"] = 42
 plt.rcParams.update({"font.size": 12})
@@ -13,22 +13,47 @@ plt.rcParams.update({"font.size": 12})
 
 class PlaceFields:
     def __init__(
-        self, x, y, neural_data, bin_size=20, one_dim=False, shuffle_test=False
+        self, t, x, y, neural_data, bin_size=20, circular=False,
+            shuffle_test=False, fps=None
     ):
         """
         Place field object.
 
         :parameters
         ---
-        x, y: (t,) arrays, positions per sample.
-        neural_data: (n,t) array, neural activity.
+        t: array
+            Time array in milliseconds.
+
+        x, y: (t,) arrays
+            Positions per sample.
+
+        neural_data: (n,t) array
+            Neural activity (usually S).
         """
-        self.x, self.y = x, y
+        self.t, self.x, self.y = t, x, y
         self.neural_data = neural_data
         self.n_neurons = neural_data.shape[0]
-        self.one_dim = one_dim
+        self.circular = circular
         self.bin_size = bin_size
 
+        # If we're using circular position, data must be in radians.
+        if any(self.x > 2*np.pi) and self.circular:
+            raise ValueError('x must be [0, 2pi]')
+
+        # Get fps.
+        if fps is None:
+            self.fps = self.get_fps()
+        else:
+            self.fps = fps
+
+        # Compute distance and velocity.
+        d = consecutive_dist(np.asarray((self.x, self.y)).T, zero_pad=True)
+        if self.circular:
+            too_far = d > np.pi
+            d[too_far] = abs((2 * np.pi) - d[too_far])
+        self.velocity = d / (1 / self.fps)
+
+        # Make occupancy maps and place fields. 
         self.occupancy_map = self.make_occupancy_map(show_plot=False)
         self.pfs = self.make_all_place_fields()
         self.spatial_information = [
@@ -37,6 +62,22 @@ class PlaceFields:
         self.pf_centers = self.find_pf_centers()
         if shuffle_test:
             self.pvals = self.assess_spatial_sig_parallel()
+
+    def get_fps(self):
+        """
+        Get sampling frequency by counting interframe interval.
+
+        :return:
+        """
+        # Take difference.
+        interframe_intervals = np.diff(self.t)
+
+        # Inter-frame interval in milliseconds.
+        mean_interval = np.mean(interframe_intervals)
+        fps = round(1 / (mean_interval / 1000))
+
+        return fps
+
 
     def make_all_place_fields(self):
         """
@@ -136,7 +177,7 @@ class PlaceFields:
             self.y,
             bin_size_cm=self.bin_size,
             show_plot=show_plot,
-            one_dim=self.one_dim,
+            one_dim=self.circular,
         )[0]
 
         if show_plot:
@@ -176,7 +217,7 @@ class PlaceFields:
             bin_size_cm=self.bin_size,
             show_plot=False,
             weights=neural_data,
-            one_dim=self.one_dim,
+            one_dim=self.circular,
         )[0]
 
         # Normalize by occupancy.
