@@ -112,7 +112,8 @@ def make_tracking_video(
 
 
 def spatial_bin(
-    x, y, bin_size_cm=20, show_plot=False, weights=None, ax=None, bins=None, one_dim=False
+    x, y, bin_size_cm=20, show_plot=False, weights=None, ax=None,
+        bins=None, one_dim=False
 ):
     """
     Spatially bins the position data.

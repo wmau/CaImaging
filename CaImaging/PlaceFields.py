@@ -6,6 +6,7 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from CaImaging.util import consecutive_dist
+from scipy.signal import savgol_filter
 
 plt.rcParams["pdf.fonttype"] = 42
 plt.rcParams.update({"font.size": 12})
@@ -14,7 +15,8 @@ plt.rcParams.update({"font.size": 12})
 class PlaceFields:
     def __init__(
         self, t, x, y, neural_data, bin_size=20, circular=False,
-            shuffle_test=False, fps=None
+            shuffle_test=False, fps=None, velocity_threshold=10,
+            circle_radius=1
     ):
         """
         Place field object.
@@ -25,7 +27,10 @@ class PlaceFields:
             Time array in milliseconds.
 
         x, y: (t,) arrays
-            Positions per sample.
+            Positions per sample. Should be in cm. If circular==True,
+            x can also be in radians, but you should also use
+            cm_per_radian. And also if circular==True, y should be
+            an array of zeros.
 
         neural_data: (n,t) array
             Neural activity (usually S).
@@ -35,6 +40,7 @@ class PlaceFields:
         self.n_neurons = neural_data.shape[0]
         self.circular = circular
         self.bin_size = bin_size
+        self.velocity_threshold = velocity_threshold
 
         # If we're using circular position, data must be in radians.
         if any(self.x > 2*np.pi) and self.circular:
@@ -44,24 +50,31 @@ class PlaceFields:
         if fps is None:
             self.fps = self.get_fps()
         else:
-            self.fps = fps
+            self.fps = int(fps)
 
-        # Compute distance and velocity.
+        # Compute distance and velocity. Smooth the velocity.
         d = consecutive_dist(np.asarray((self.x, self.y)).T, zero_pad=True)
         if self.circular:
             too_far = d > np.pi
             d[too_far] = abs((2 * np.pi) - d[too_far])
         self.velocity = d / (1 / self.fps)
+        # Convert radians to arc length by the formula s=r*theta.
+        if self.circular:
+            self.velocity *= circle_radius
+        self.velocity = savgol_filter(self.velocity, self.fps, 1)
+        self.running = self.velocity > self.velocity_threshold
 
-        # Make occupancy maps and place fields. 
+        # Make occupancy maps and place fields.
         self.occupancy_map = self.make_occupancy_map(show_plot=False)
         self.pfs = self.make_all_place_fields()
         self.spatial_information = [
             spatial_information(pf, self.occupancy_map) for pf in self.pfs
         ]
         self.pf_centers = self.find_pf_centers()
+        self.assess_spatial_sig(0)
         if shuffle_test:
-            self.pvals = self.assess_spatial_sig_parallel()
+            self.pvals, self.SI_z = self.assess_spatial_sig_parallel()
+
 
     def get_fps(self):
         """
@@ -76,7 +89,7 @@ class PlaceFields:
         mean_interval = np.mean(interframe_intervals)
         fps = round(1 / (mean_interval / 1000))
 
-        return fps
+        return int(fps)
 
 
     def make_all_place_fields(self):
@@ -118,10 +131,12 @@ class PlaceFields:
             shuffled_SIs.append(spatial_information(shuffled_pf, self.occupancy_map))
 
         p_value = np.sum(self.spatial_information[neuron] < shuffled_SIs) / n_shuffles
+        SI_z = (self.spatial_information[neuron] - np.mean(shuffled_SIs)) / np.std(shuffled_SIs)
 
-        return p_value
+        return p_value, SI_z
 
     def assess_spatial_sig_parallel(self):
+        print('Doing shuffle tests. This may take a while.')
         neurons = tqdm([n for n in range(self.n_neurons)])
         n_cores = mp.cpu_count()
         # with futures.ProcessPoolExecutor() as pool:
@@ -130,7 +145,9 @@ class PlaceFields:
             delayed(self.assess_spatial_sig)(i) for i in neurons
         )
 
-        return results
+        pvals, SI_z = zip(*results)
+
+        return pvals, SI_z
 
     def plot_dots(
         self, neuron, std_thresh=2, pos_color="k", transient_color="r", ax=None
@@ -212,11 +229,11 @@ class PlaceFields:
             neural_data = self.neural_data[neuron]
 
         pf = spatial_bin(
-            self.x,
-            self.y,
+            self.x[self.running],
+            self.y[self.running],
             bin_size_cm=self.bin_size,
             show_plot=False,
-            weights=neural_data,
+            weights=neural_data[self.running],
             one_dim=self.circular,
         )[0]
 
