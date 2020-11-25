@@ -102,11 +102,11 @@ class PlaceFields:
         for neuron in range(self.neural_data.shape[0]):
             pfs.append(self.make_place_field(neuron, show_plot=False))
 
-        return pfs
+        return np.asarray(pfs)
 
     def make_snake_plot(self, order='sorted', neurons='all', normalize=True):
         if neurons == 'all':
-            neurons = [n for n in range(self.n_neurons)]
+            neurons = np.asarray([int(n) for n in range(self.n_neurons)])
         pfs = self.pfs[neurons]
 
         if order == 'sorted':
@@ -122,7 +122,7 @@ class PlaceFields:
     def find_pf_centers(self):
         centers = [np.argmax(pf) for pf in self.pfs]
 
-        return centers
+        return np.asarray(centers)
 
     def assess_spatial_sig(self, neuron, n_shuffles=500):
         shuffled_SIs = []
