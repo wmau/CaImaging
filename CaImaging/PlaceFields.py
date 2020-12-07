@@ -29,11 +29,32 @@ class PlaceFields:
         x, y: (t,) arrays
             Positions per sample. Should be in cm. If circular==True,
             x can also be in radians, but you should also use
-            cm_per_radian. And also if circular==True, y should be
+            circle_radius. And also if circular==True, y should be
             an array of zeros.
 
         neural_data: (n,t) array
             Neural activity (usually S).
+
+        bin_size: int
+            Bin size in cm.
+
+        circular: bool
+            Whether the x data is in radians (for circular tracks).
+
+        shuffle_test: bool
+            Flag to shuffle data in time to recompute spatial information.
+
+        fps: int
+            Sampling rate. If None, will try to compute based on supplied
+            time vector.
+
+        velocity_threshold: float
+            Velocity to threshold whether animal is running or not.
+
+        circle_radius: float
+            Radius of circular track in cm (38.1 for Will's tracK). 
+
+
         """
         self.t, self.x, self.y = t, x, y
         self.neural_data = neural_data
