@@ -11,7 +11,7 @@ import pandas as pd
 
 
 class SpatialFootprints():
-    def __init__(self, mouse_path, session_folder_up_n_levels=-3):
+    def __init__(self, mouse_path, session_folder_up_n_levels=-3, minian_perf=True):
         """
         Class that handles spatial footprint-related stuff. Currently only
         makes the .mat file that gets fed into Ziv Lab's CellReg Matlab package.
@@ -30,6 +30,7 @@ class SpatialFootprints():
         self.session_paths = [folder.parent for folder in Path(self.mouse_path).rglob('minian')]
         self.session_numbers = [folder.parts[session_folder_up_n_levels]
                                 for folder in self.session_paths]
+        self.minian_perf = minian_perf
 
     def make_mat(self, save_path=None):
         """
@@ -65,7 +66,9 @@ class SpatialFootprints():
 
             # Reshape matrix. CellReg reads (neuron, x, y) arrays.
             footprints = np.asarray(data.A)
-            footprints = np.rollaxis(footprints, 2)
+
+            if not self.minian_perf:
+                footprints = np.rollaxis(footprints, 2)
 
             # Save.
             savemat(fname,
@@ -380,4 +383,9 @@ def plot_footprints(cell_map, cols, neurons=range(10)):
     sessions = get_cellmap_columns(cell_map, cols)
 
 if __name__ == '__main__':
-    CellRegObj(r'Z:\Will\Drift\Data\Castor_Scope05\SpatialFootprints\CellRegResults')
+    #CellRegObj(r'Z:\Will\Drift\Data\Castor_Scope05\SpatialFootprints\CellRegResults')
+    S = SpatialFootprints(r'Z:\Will\Drift\Data\Io')
+    S.session_paths = S.session_paths[2:]
+    S.session_numbers = [folder.parts[-3] for folder in
+                         S.session_paths]
+    S.make_mat()
