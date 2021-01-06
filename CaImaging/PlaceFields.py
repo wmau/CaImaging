@@ -52,7 +52,7 @@ class PlaceFields:
             Velocity to threshold whether animal is running or not.
 
         circle_radius: float
-            Radius of circular track in cm (38.1 for Will's tracK). 
+            Radius of circular track in cm (38.1 for Will's tracK).
 
 
         """
@@ -151,7 +151,9 @@ class PlaceFields:
             shuffled_pf = self.make_place_field(neuron, show_plot=False, shuffle=True)
             shuffled_SIs.append(spatial_information(shuffled_pf, self.occupancy_map))
 
+        shuffled_SIs = np.asarray(shuffled_SIs)
         p_value = np.sum(self.spatial_information[neuron] < shuffled_SIs) / n_shuffles
+
         SI_z = (self.spatial_information[neuron] - np.mean(shuffled_SIs)) / np.std(shuffled_SIs)
 
         return p_value, SI_z
