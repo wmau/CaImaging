@@ -14,9 +14,17 @@ plt.rcParams.update({"font.size": 12})
 
 class PlaceFields:
     def __init__(
-        self, t, x, y, neural_data, bin_size=20, circular=False,
-            shuffle_test=False, fps=None, velocity_threshold=10,
-            circle_radius=1
+        self,
+        t,
+        x,
+        y,
+        neural_data,
+        bin_size=20,
+        circular=False,
+        shuffle_test=False,
+        fps=None,
+        velocity_threshold=10,
+        circle_radius=1,
     ):
         """
         Place field object.
@@ -63,9 +71,12 @@ class PlaceFields:
         self.bin_size = bin_size
         self.velocity_threshold = velocity_threshold
 
+        if self.circular:
+            self.circle_radius = circle_radius
+
         # If we're using circular position, data must be in radians.
-        if any(self.x > 2*np.pi) and self.circular:
-            raise ValueError('x must be [0, 2pi]')
+        if any(self.x > 2 * np.pi) and self.circular:
+            raise ValueError("x must be [0, 2pi]")
 
         # Get fps.
         if fps is None:
@@ -92,10 +103,8 @@ class PlaceFields:
             spatial_information(pf, self.occupancy_map) for pf in self.pfs
         ]
         self.pf_centers = self.find_pf_centers()
-        self.assess_spatial_sig(0)
         if shuffle_test:
             self.pvals, self.SI_z = self.assess_spatial_sig_parallel()
-
 
     def get_fps(self):
         """
@@ -112,7 +121,6 @@ class PlaceFields:
 
         return int(fps)
 
-
     def make_all_place_fields(self):
         """
         Compute the spatial rate maps of all neurons.
@@ -125,12 +133,12 @@ class PlaceFields:
 
         return np.asarray(pfs)
 
-    def make_snake_plot(self, order='sorted', neurons='all', normalize=True):
-        if neurons == 'all':
+    def make_snake_plot(self, order="sorted", neurons="all", normalize=True):
+        if neurons == "all":
             neurons = np.asarray([int(n) for n in range(self.n_neurons)])
         pfs = self.pfs[neurons]
 
-        if order == 'sorted':
+        if order == "sorted":
             order = np.argsort(self.pf_centers[neurons])
 
         if normalize:
@@ -138,7 +146,6 @@ class PlaceFields:
 
         fig, ax = plt.subplots()
         ax.imshow(pfs[order])
-
 
     def find_pf_centers(self):
         centers = [np.argmax(pf) for pf in self.pfs]
@@ -154,12 +161,14 @@ class PlaceFields:
         shuffled_SIs = np.asarray(shuffled_SIs)
         p_value = np.sum(self.spatial_information[neuron] < shuffled_SIs) / n_shuffles
 
-        SI_z = (self.spatial_information[neuron] - np.mean(shuffled_SIs)) / np.std(shuffled_SIs)
+        SI_z = (self.spatial_information[neuron] - np.mean(shuffled_SIs)) / np.std(
+            shuffled_SIs
+        )
 
         return p_value, SI_z
 
     def assess_spatial_sig_parallel(self):
-        print('Doing shuffle tests. This may take a while.')
+        print("Doing shuffle tests. This may take a while.")
         neurons = tqdm([n for n in range(self.n_neurons)])
         n_cores = mp.cpu_count()
         # with futures.ProcessPoolExecutor() as pool:
