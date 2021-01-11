@@ -164,7 +164,7 @@ def spatial_bin(
 
             ax.plot(H)
 
-        return H, edges
+        return H, edges, bins
 
     else:
         if bins is None:
@@ -186,7 +186,7 @@ def spatial_bin(
 
             ax.imshow(H)
 
-        return H, xedges, yedges
+        return H, xedges, yedges, bins
 
 
 class ManualCorrect:
