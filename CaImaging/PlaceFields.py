@@ -64,51 +64,65 @@ class PlaceFields:
 
 
         """
-        self.data = {'t': t,
-                     'x': x,
-                     'y': y,
-                     'neural': neural_data,
-                     'n_neurons': neural_data.shape[0]}
-        self.meta = {'circular': circular,
-                     'bin_size': bin_size,
-                     'velocity_threshold': velocity_threshold}
+        self.data = {
+            "t": t,
+            "x": x,
+            "y": y,
+            "neural": neural_data,
+            "n_neurons": neural_data.shape[0],
+        }
+        self.meta = {
+            "circular": circular,
+            "bin_size": bin_size,
+            "velocity_threshold": velocity_threshold,
+        }
 
-
-        if self.meta['circular']:
-            self.meta['circle_radius'] = circle_radius
+        if self.meta["circular"]:
+            self.meta["circle_radius"] = circle_radius
 
         # If we're using circular position, data must be in radians.
-        if any(self.data['x'] > 2 * np.pi) and self.meta['circular']:
+        if any(self.data["x"] > 2 * np.pi) and self.meta["circular"]:
             raise ValueError("x must be [0, 2pi]")
 
         # Get fps.
         if fps is None:
-            self.meta['fps'] = self.get_fps()
+            self.meta["fps"] = self.get_fps()
         else:
-            self.meta['fps'] = int(fps)
+            self.meta["fps"] = int(fps)
 
         # Compute distance and velocity. Smooth the velocity.
-        d = consecutive_dist(np.asarray((self.data['x'], self.data['x'])).T, zero_pad=True)
-        if self.meta['circular']:
+        d = consecutive_dist(
+            np.asarray((self.data["x"], self.data["x"])).T, zero_pad=True
+        )
+        if self.meta["circular"]:
             too_far = d > np.pi
             d[too_far] = abs((2 * np.pi) - d[too_far])
-        self.data['velocity'] = d / (1 / self.meta['fps'])
+        self.data["velocity"] = d / (1 / self.meta["fps"])
 
         # Convert radians to arc length by the formula s=r*theta.
-        if self.meta['circular']:
-            self.data['velocity'] *= circle_radius
-        self.data['velocity'] = savgol_filter(self.data['velocity'], self.meta['fps'], 1)
-        self.data['running'] = self.data['velocity'] > self.meta['velocity_threshold']
+        if self.meta["circular"]:
+            self.data["velocity"] *= circle_radius
+        self.data["velocity"] = savgol_filter(
+            self.data["velocity"], self.meta["fps"], 1
+        )
+        self.data["running"] = self.data["velocity"] > self.meta["velocity_threshold"]
 
         # Make occupancy maps and place fields.
-        self.data['occupancy_map'], self.data['occupancy_bins'] = self.make_occupancy_map(show_plot=False)
-        self.data['placefields'] = self.make_all_place_fields()
-        self.data['spatial_info'] = [
-            spatial_information(pf, self.data['occupancy_map']) for pf in self.data['placefields']
+        (
+            self.data["occupancy_map"],
+            self.data["occupancy_bins"],
+        ) = self.make_occupancy_map(show_plot=False)
+        self.data["placefields"] = self.make_all_place_fields()
+        self.data["spatial_info"] = [
+            spatial_information(pf, self.data["occupancy_map"])
+            for pf in self.data["placefields"]
         ]
-        self.data['placefield_centers'] = self.find_pf_centers()
+        self.data["placefield_centers"] = self.find_pf_centers()
         if shuffle_test:
-            self.data['spatial_info_pvals'], self.data['spatial_info_z'] = self.assess_spatial_sig_parallel()
+            (
+                self.data["spatial_info_pvals"],
+                self.data["spatial_info_z"],
+            ) = self.assess_spatial_sig_parallel()
 
     def get_fps(self):
         """
@@ -117,7 +131,7 @@ class PlaceFields:
         :return:
         """
         # Take difference.
-        interframe_intervals = np.diff(self.data['t'])
+        interframe_intervals = np.diff(self.data["t"])
 
         # Inter-frame interval in milliseconds.
         mean_interval = np.mean(interframe_intervals)
@@ -132,18 +146,18 @@ class PlaceFields:
         :return:
         """
         pfs = []
-        for neuron in range(self.data['neural'].shape[0]):
+        for neuron in range(self.data["neural"].shape[0]):
             pfs.append(self.make_place_field(neuron, show_plot=False))
 
         return np.asarray(pfs)
 
     def make_snake_plot(self, order="sorted", neurons="all", normalize=True):
         if neurons == "all":
-            neurons = np.asarray([int(n) for n in range(self.data['n_neurons'])])
-        pfs = self.data['placefields'][neurons]
+            neurons = np.asarray([int(n) for n in range(self.data["n_neurons"])])
+        pfs = self.data["placefields"][neurons]
 
         if order == "sorted":
-            order = np.argsort(self.data['placefield_centers'][neurons])
+            order = np.argsort(self.data["placefield_centers"][neurons])
 
         if normalize:
             pfs = pfs / pfs.max(axis=1)[:, np.newaxis]
@@ -152,7 +166,7 @@ class PlaceFields:
         ax.imshow(pfs[order])
 
     def find_pf_centers(self):
-        centers = [np.argmax(pf) for pf in self.data['placefields']]
+        centers = [np.argmax(pf) for pf in self.data["placefields"]]
 
         return np.asarray(centers)
 
@@ -160,12 +174,14 @@ class PlaceFields:
         shuffled_SIs = []
         for i in range(n_shuffles):
             shuffled_pf = self.make_place_field(neuron, show_plot=False, shuffle=True)
-            shuffled_SIs.append(spatial_information(shuffled_pf, self.data['occupancy_map']))
+            shuffled_SIs.append(
+                spatial_information(shuffled_pf, self.data["occupancy_map"])
+            )
 
         shuffled_SIs = np.asarray(shuffled_SIs)
-        p_value = np.sum(self.data['spatial_info'][neuron] < shuffled_SIs) / n_shuffles
+        p_value = np.sum(self.data["spatial_info"][neuron] < shuffled_SIs) / n_shuffles
 
-        SI_z = (self.data['spatial_info'][neuron] - np.mean(shuffled_SIs)) / np.std(
+        SI_z = (self.data["spatial_info"][neuron] - np.mean(shuffled_SIs)) / np.std(
             shuffled_SIs
         )
 
@@ -173,7 +189,7 @@ class PlaceFields:
 
     def assess_spatial_sig_parallel(self):
         print("Doing shuffle tests. This may take a while.")
-        neurons = tqdm([n for n in range(self.data['n_neurons'])])
+        neurons = tqdm([n for n in range(self.data["n_neurons"])])
         n_cores = mp.cpu_count()
         # with futures.ProcessPoolExecutor() as pool:
         #     results = pool.map(self.assess_spatial_sig, neurons)
@@ -203,17 +219,22 @@ class PlaceFields:
 
         """
         # Define threshold.
-        thresh = np.mean(self.data['neural'][neuron]) + std_thresh * np.std(
-            self.data['neural'][neuron]
+        thresh = np.mean(self.data["neural"][neuron]) + std_thresh * np.std(
+            self.data["neural"][neuron]
         )
-        supra_thresh = self.data['neural'][neuron] > thresh
+        supra_thresh = self.data["neural"][neuron] > thresh
 
         # Plot.
         if ax is None:
             fig, ax = plt.subplots()
 
-        ax.scatter(self.data['x'], self.data['y'], s=3, c=pos_color)
-        ax.scatter(self.data['x'][supra_thresh], self.data['y'][supra_thresh], s=3, c=transient_color)
+        ax.scatter(self.data["x"], self.data["y"], s=3, c=pos_color)
+        ax.scatter(
+            self.data["x"][supra_thresh],
+            self.data["y"][supra_thresh],
+            s=3,
+            c=transient_color,
+        )
 
     def make_occupancy_map(self, show_plot=True, ax=None):
         """
@@ -226,11 +247,11 @@ class PlaceFields:
 
         """
         temp = spatial_bin(
-            self.data['x'],
-            self.data['y'],
-            bin_size_cm=self.meta['bin_size'],
+            self.data["x"],
+            self.data["y"],
+            bin_size_cm=self.meta["bin_size"],
             show_plot=show_plot,
-            one_dim=self.meta['circular'],
+            one_dim=self.meta["circular"],
         )
         occupancy_map, occupancy_bins = temp[0], temp[-1]
 
@@ -260,24 +281,24 @@ class PlaceFields:
         pf: (x,y) array, 2d histogram of position weighted by activity.
         """
         if shuffle:
-            random_shift = randint(300, self.data['neural'].shape[1])
-            neural_data = np.roll(self.data['neural'][neuron], random_shift)
+            random_shift = randint(300, self.data["neural"].shape[1])
+            neural_data = np.roll(self.data["neural"][neuron], random_shift)
         else:
-            neural_data = self.data['neural'][neuron]
+            neural_data = self.data["neural"][neuron]
 
         pf = spatial_bin(
-            self.data['x'][self.data['running']],
-            self.data['y'][self.data['running']],
-            bin_size_cm=self.meta['bin_size'],
+            self.data["x"][self.data["running"]],
+            self.data["y"][self.data["running"]],
+            bin_size_cm=self.meta["bin_size"],
             show_plot=False,
-            weights=neural_data[self.data['running']],
-            one_dim=self.meta['circular'],
-            bins = self.data['occupancy_bins']
+            weights=neural_data[self.data["running"]],
+            one_dim=self.meta["circular"],
+            bins=self.data["occupancy_bins"],
         )[0]
 
         # Normalize by occupancy.
         if normalize_by_occ:
-            pf = pf / self.data['occupancy_map']
+            pf = pf / self.data["occupancy_map"]
 
         if show_plot:
             if ax is None:

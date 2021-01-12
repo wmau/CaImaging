@@ -2,8 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from CaImaging.util import check_attrs
 
+
 def overlay_footprints(ScrollObj):
-    attrs = ['footprints']
+    attrs = ["footprints"]
     check_attrs(ScrollObj, attrs)
 
     footprints = ScrollObj.footprints
@@ -12,9 +13,9 @@ def overlay_footprints(ScrollObj):
 
     for channel, footprints_this_day in enumerate(footprints):
         footprint = footprints_this_day[ScrollObj.current_position]
-        overlay[:,:,channel] = footprint / np.max(footprint)
+        overlay[:, :, channel] = footprint / np.max(footprint)
 
     ax = ScrollObj.ax
-    ax.imshow(overlay, origin='lower')
+    ax.imshow(overlay, origin="lower")
 
     ScrollObj.last_position = footprints[0].shape[0]
