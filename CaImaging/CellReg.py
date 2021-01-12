@@ -152,7 +152,7 @@ class CellRegObj:
         footprints = []
         for idx in footprints_reference:
             # Float 32 takes less memory.
-            session_footprints = np.float32(np.transpose(self.file[idx].value, (2, 1, 0))
+            session_footprints = np.float32(np.transpose(self.file[idx].value, (2, 1, 0)))
             footprints.append(session_footprints)
 
         return footprints
