@@ -1,5 +1,6 @@
-from CaImaging.util import filter_sessions, nan_array
+from CaImaging.util import filter_sessions, nan_array, ScrollPlot
 from CaImaging.Miniscope import open_minian
+from CaImaging.plotting import overlay_footprints
 from pathlib import Path
 import os
 from scipy.io import savemat
@@ -151,7 +152,7 @@ class CellRegObj:
         footprints = []
         for idx in footprints_reference:
             # Float 32 takes less memory.
-            session_footprints = np.float32(np.transpose(self.file[idx].value, (2, 0, 1)))
+            session_footprints = np.float32(np.transpose(self.file[idx].value, (2, 1, 0))
             footprints.append(session_footprints)
 
         return footprints
@@ -383,9 +384,9 @@ def plot_footprints(cell_map, cols, neurons=range(10)):
     sessions = get_cellmap_columns(cell_map, cols)
 
 if __name__ == '__main__':
-    #CellRegObj(r'Z:\Will\Drift\Data\Castor_Scope05\SpatialFootprints\CellRegResults')
-    S = SpatialFootprints(r'Z:\Will\Drift\Data\Io')
-    S.session_paths = S.session_paths[2:]
-    S.session_numbers = [folder.parts[-3] for folder in
-                         S.session_paths]
-    S.make_mat()
+    CellRegObj(r'Z:\Will\Drift\Data\Encedalus_Scope14\SpatialFootprints\CellRegResults')
+    # S = SpatialFootprints(r'Z:\Will\Drift\Data\Io')
+    # S.session_paths = S.session_paths[2:]
+    # S.session_numbers = [folder.parts[-3] for folder in
+    #                      S.session_paths]
+    # S.make_mat()
