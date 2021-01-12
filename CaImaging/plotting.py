@@ -15,6 +15,6 @@ def overlay_footprints(ScrollObj):
         overlay[:,:,channel] = footprint / np.max(footprint)
 
     ax = ScrollObj.ax
-    ax.imshow(overlay)
+    ax.imshow(overlay, origin='lower')
 
     ScrollObj.last_position = footprints[0].shape[0]
