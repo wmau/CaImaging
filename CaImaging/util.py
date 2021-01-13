@@ -685,8 +685,8 @@ def sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=6, behav
 
     :parameters
     ---
-    behavior_data: str
-        Full file path to a csv from ezTrack.
+    behavior_data: str or DataFrame
+        Full file path to a csv from ezTrack or DataFrame of behavior data.
 
     minian_path: str
         Full file path to the folder containing the minian folder.
@@ -742,7 +742,7 @@ def sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=6, behav
 
     miniscope_frames = np.asarray(minian.C.frame)
     miniscope_frames = miniscope_frames[miniscope_frames <= ts_map.index[-1]]
-    behavior_frames = ts_map.fmCam1.loc[ts_map.fmCam0.isin(miniscope_frames)]
+    behavior_frames = np.asarray(ts_map.fmCam1.loc[ts_map.fmCam0.isin(miniscope_frames)])
 
     # Rearrange all the behavior frames.
     synced_behavior = behavior.iloc[behavior_frames]
@@ -752,6 +752,7 @@ def sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=6, behav
     ca_data = {
         "C": np.asarray(minian.C.sel(frame=miniscope_frames)),
         "S": np.asarray(minian.S.sel(frame=miniscope_frames)),
+        "frames": miniscope_frames,
         #'A': np.asarray(minian.A)
     }
 
@@ -901,4 +902,4 @@ if __name__ == "__main__":
     minian_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5"
     timestamp_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\timestamp.dat"
 
-    sync_data(behavior_path, minian_path, timestamp_path, miniscope_cam=2, behav_cam=0)
+    #sync_data(behavior_path, minian_path, timestamp_path, miniscope_cam=2, behav_cam=0)
