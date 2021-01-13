@@ -876,6 +876,21 @@ def group_consecutives(vals, step):
     return result
 
 
+def cluster(data, maxgap):
+    '''Arrange data into groups where successive elements
+       differ by no more than *maxgap*
+
+    '''
+    data.sort()
+    groups = [[data[0]]]
+    for x in data[1:]:
+        if abs(x - groups[-1][-1]) <= maxgap:
+            groups[-1].append(x)
+        else:
+            groups.append([x])
+    return groups
+
+
 def round_up_to_odd(f):
     return int(np.ceil(f) // 2 * 2 + 1)
 
