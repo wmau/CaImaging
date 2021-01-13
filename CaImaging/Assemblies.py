@@ -13,10 +13,12 @@ import numpy.matlib
 import matplotlib.pyplot as plt
 
 #### Custom imports start here ####
-from CaImaging.Miniscope import open_minian
+import CaImaging.Miniscope
+from CaImaging.Miniscope import open_minian, get_transient_timestamps
 from CaImaging import util
 from itertools import zip_longest
 import warnings
+from tqdm import tqdm
 
 
 from CaImaging.CellReg import CellRegObj, trim_map, rearrange_neurons, get_cellreg_path
@@ -96,7 +98,7 @@ def circshuffling(zactmat, significance):
     np.random.seed()
 
     lambdamax_ = np.zeros(significance.nshu)
-    for shui in range(significance.nshu):
+    for shui in tqdm(range(significance.nshu)):
         zactmat_ = np.copy(zactmat)
         for (neuroni, activity) in enumerate(zactmat_):
             cut = int(np.random.randint(significance.nbins * 2))
@@ -283,8 +285,8 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp',
     """
 
     if use_bool:
-        bool_arr = util.get_transient_timestamps(neural_data,
-                                                 thresh_type='eps')[2]
+        bool_arr = get_transient_timestamps(neural_data,
+                                            thresh_type='eps')[2]
         actmat = bool_arr
     else:
         actmat = stats.zscore(neural_data, axis=1)
@@ -298,7 +300,7 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp',
         activations = computeAssemblyActivity(patterns, actmat)
 
         if plot:
-            sorted_spiking, sorted_colors = membership_sort(patterns, spiking)
+            sorted_spiking, sorted_colors = membership_sort(patterns, actmat)
             plot_assemblies(activations, sorted_spiking, colors=sorted_colors)
     else:
         activations = None
@@ -358,8 +360,8 @@ def preprocess_multiple_sessions(S_list, smooth_factor=0,
 
         # Get spiking timestamps.
         temp_s, temp_r, temp_bool = \
-            util.get_transient_timestamps(S, thresh_type='eps',
-                                          do_zscore=False)
+            get_transient_timestamps(S, thresh_type='eps',
+                                     do_zscore=False)
         spike_times.append(temp_s)
         rates.append(temp_r)
         bool_arr_list.append(temp_bool)

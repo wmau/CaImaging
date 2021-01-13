@@ -407,13 +407,13 @@ def scrollplot_footprints(cellreg_path, sessions, neurons=range(10)):
 
 
 if __name__ == "__main__":
-    cellreg_path = (
-        r"Z:\Will\Drift\Data\Encedalus_Scope14\SpatialFootprints\CellRegResults"
-    )
+    # cellreg_path = (
+    #     r"Z:\Will\Drift\Data\Encedalus_Scope14\SpatialFootprints\CellRegResults"
+    # )
 
     # CellRegObj(r'Z:\Will\Drift\Data\Encedalus_Scope14\SpatialFootprints\CellRegResults')
-    # S = SpatialFootprints(r'Z:\Will\Drift\Data\Io')
-    # S.session_paths = S.session_paths[2:]
+    S = SpatialFootprints(r'Z:\Will\Drift\Data\Castor_Scope05')
+    S.session_paths = S.session_paths[2:]
     # S.session_numbers = [folder.parts[-3] for folder in
     #                      S.session_paths]
     # S.make_mat()

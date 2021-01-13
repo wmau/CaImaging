@@ -204,9 +204,56 @@ def open_minian(dpath, fname="minian", backend="zarr", chunks=None):
     else:
         raise NotImplementedError("backend {} not supported".format(backend))
 
+def get_transient_timestamps(
+    neural_data, thresh_type="eps", do_zscore=True, std_thresh=3
+):
+    """
+    Converts an array of continuous time series (e.g., traces or S)
+    into lists of timestamps where activity exceeds some threshold.
+
+    :parameters
+    ---
+    neural_data: (neuron, time) array
+        Neural time series, (e.g., C or S).
+
+    std_thresh: float
+        Number of standard deviations above the mean to define threshold.
+
+    :returns
+    ---
+    event_times: list of length neuron
+        Each entry in the list contains the timestamps of a neuron's
+        activity.
+
+    event_mags: list of length neuron
+        Event magnitudes.
+
+    """
+    # Compute thresholds for each neuron.
+    neural_data = np.asarray(neural_data, dtype=np.float32)
+    if thresh_type == "eps":
+        thresh = np.repeat(np.finfo(np.float32).eps, neural_data.shape[0])
+    else:
+        if do_zscore:
+            stds = np.std(neural_data, axis=1)
+            means = np.mean(neural_data, axis=1)
+            thresh = means + std_thresh * stds
+        else:
+            thresh = np.repeat(std_thresh, neural_data.shape[0])
+
+    # Get event times and magnitudes.
+    bool_arr = neural_data > np.tile(thresh, [neural_data.shape[1], 1]).T
+
+    event_times = [np.where(neuron > t)[0] for neuron, t in zip(neural_data, thresh)]
+
+    event_mags = [neuron[neuron > t] for neuron, t in zip(neural_data, thresh)]
+
+    return event_times, event_mags, bool_arr
 
 if __name__ == "__main__":
     folder = r"C:\Users\wm228\OneDrive\Documents\Sinai\Projects\Circle track\M1\03_09_2020\H11_M38_S32"
     # data = sync_preprocessed_data(folder)
 
     pass
+
+
