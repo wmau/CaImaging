@@ -742,7 +742,9 @@ def sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=6, behav
 
     miniscope_frames = np.asarray(minian.C.frame)
     miniscope_frames = miniscope_frames[miniscope_frames <= ts_map.index[-1]]
-    behavior_frames = np.asarray(ts_map.fmCam1.loc[ts_map.fmCam0.isin(miniscope_frames)])
+    behavior_frames = np.asarray(
+        ts_map.fmCam1.loc[ts_map.fmCam0.isin(miniscope_frames)]
+    )
 
     # Rearrange all the behavior frames.
     synced_behavior = behavior.iloc[behavior_frames]
@@ -859,6 +861,21 @@ def chunk(lst, n):
     return chunked
 
 
+def group_consecutives(vals, step):
+    """Return list of consecutive lists of numbers from vals (number list)."""
+    run = []
+    result = [run]
+    expect = None
+    for v in vals:
+        if (v == expect) or (expect is None):
+            run.append(v)
+        else:
+            run = [v]
+            result.append(run)
+        expect = v + step
+    return result
+
+
 def round_up_to_odd(f):
     return int(np.ceil(f) // 2 * 2 + 1)
 
@@ -902,4 +919,4 @@ if __name__ == "__main__":
     minian_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5"
     timestamp_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\timestamp.dat"
 
-    #sync_data(behavior_path, minian_path, timestamp_path, miniscope_cam=2, behav_cam=0)
+    # sync_data(behavior_path, minian_path, timestamp_path, miniscope_cam=2, behav_cam=0)
