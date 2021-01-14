@@ -283,10 +283,9 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp',
         (n/a if nullhyp is NOT 'mp')
 
     """
-
+    spiking, _, bool_arr = get_transient_timestamps(neural_data,
+                                                    thresh_type='eps')
     if use_bool:
-        bool_arr = get_transient_timestamps(neural_data,
-                                            thresh_type='eps')[2]
         actmat = bool_arr
     else:
         actmat = stats.zscore(neural_data, axis=1)
@@ -300,7 +299,7 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp',
         activations = computeAssemblyActivity(patterns, actmat)
 
         if plot:
-            sorted_spiking, sorted_colors = membership_sort(patterns, actmat)
+            sorted_spiking, sorted_colors = membership_sort(patterns, spiking)
             plot_assemblies(activations, sorted_spiking, colors=sorted_colors)
     else:
         activations = None
