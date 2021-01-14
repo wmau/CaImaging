@@ -314,12 +314,18 @@ def rearrange_neurons(cell_map, neural_data):
         cell_map = np.expand_dims(cell_map, 1)
     neural_data = [neural_data] if not isinstance(neural_data, list) else neural_data
 
+    spike_list = True if isinstance(neural_data[0], list) else False
+
     missing = -9999
     if not missing in cell_map:
         # Do a simple rearrangement of rows based on mappings.
         rearranged = []
-        for n, session in enumerate(neural_data):
-            rearranged.append(session[cell_map[:, n]])
+        if spike_list:
+            for n, single_session_activity in enumerate(neural_data):
+                rearranged.append([single_session_activity[neuron] for neuron in cell_map[:, n]])
+        else:
+            for n, single_session_activity in enumerate(neural_data):
+                rearranged.append(single_session_activity[cell_map[:, n]])
 
     else:
         # Catches cases where -9999s (non-matched neurons) are in cell_map.
@@ -329,22 +335,30 @@ def rearrange_neurons(cell_map, neural_data):
         print("Unmatched neurons detected in cell_map. Padding with zeros")
         rearranged = []
 
-        for n, session in enumerate(neural_data):
-            # Assume neuron is not active, fill with zeros.
-            rearranged_session = nan_array((cell_map.shape[0], session.shape[1]))
+        if spike_list:
+            for n, single_session_activity in enumerate(neural_data):
+                for neuron in cell_map[:, n]:
+                    if neuron == missing:
+                        rearranged.append([])
+                    else:
+                        rearranged.append(single_session_activity[neuron])
+        else:
+            for n, single_session_activity in enumerate(neural_data):
+                # Assume neuron is not active, fill with zeros.
+                rearranged_session = nan_array((cell_map.shape[0], single_session_activity.shape[1]))
 
-            # Be sure to only grab neurons if cell_map value is > -1.
-            # Otherwise, it will take the last neuron (-1).
-            for m, neuron in enumerate(cell_map[:, n]):
-                if neuron > missing:
-                    rearranged_session[m] = session[neuron]
+                # Be sure to only grab neurons if cell_map value is > -1.
+                # Otherwise, it will take the last neuron (-1).
+                for m, neuron in enumerate(cell_map[:, n]):
+                    if neuron > missing:
+                        rearranged_session[m] = single_session_activity[neuron]
 
-            # Append rearranged matrix with paddded zeros.
-            rearranged.append(rearranged_session)
+                # Append rearranged matrix with paddded zeros.
+                rearranged.append(rearranged_session)
 
     return rearranged
 
-
+# DEPRECATED.
 def get_cellreg_path(cell_map, mouse, animal_key="Mouse", cellreg_key="CellRegPath"):
     """
     Grabs the path containing CellRegResults folder from a dict
