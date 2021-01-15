@@ -157,10 +157,10 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
         Number of S per cell for each bin.
 
     """
-    # Convert input into
+    # Convert input into array
     if type(data) is not np.ndarray:
         data = np.asarray(data)
-    data = np.round(data, 3)
+    #data = np.round(data, 3)
 
     # Group data into bins.
     bins = make_bins(data, bin_size_in_seconds * fps)
