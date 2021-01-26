@@ -7,6 +7,7 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 from CaImaging.util import consecutive_dist
 from scipy.signal import savgol_filter
+from sklearn.impute import SimpleImputer
 
 plt.rcParams["pdf.fonttype"] = 42
 plt.rcParams.update({"font.size": 12})
@@ -64,6 +65,10 @@ class PlaceFields:
 
 
         """
+        imp = SimpleImputer(missing_values=np.nan, strategy='constant',
+                            fill_value=0)
+        neural_data = imp.fit_transform(neural_data.T).T
+
         self.data = {
             "t": t,
             "x": x,
@@ -160,7 +165,7 @@ class PlaceFields:
             order = np.argsort(self.data["placefield_centers"][neurons])
 
         if normalize:
-            pfs = pfs / pfs.max(axis=1)[:, np.newaxis]
+            pfs = pfs / pfs.nanmax(axis=1)[:, np.newaxis]
 
         fig, ax = plt.subplots()
         ax.imshow(pfs[order])
@@ -264,7 +269,7 @@ class PlaceFields:
         return occupancy_map, occupancy_bins
 
     def make_place_field(
-        self, neuron, show_plot=True, normalize_by_occ=False, ax=None, shuffle=False
+        self, neuron, show_plot=True, normalize_by_occ=True, ax=None, shuffle=False
     ):
         """
         Bins activity in space. Essentially a 2d histogram weighted by
