@@ -543,6 +543,9 @@ def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
         ax2.eventplot(spikes, colors=c)
         ax.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
+        ax.set_ylabel('Ensemble activation [a.u.]')
+        ax.set_xlabel('Time [frame]')
+        ax2.set_ylabel('Neuron #', rotation=-90)
 
     return fig, axes
 

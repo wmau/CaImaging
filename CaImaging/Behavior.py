@@ -153,7 +153,7 @@ def spatial_bin(
     if one_dim:
         if bins is None:
             bins = np.linspace(
-                x_extrema[0], x_extrema[1], np.round(np.diff(x_extrema) / bin_size_cm)
+                x_extrema[0], x_extrema[1], int(np.round(np.diff(x_extrema)[0] / bin_size_cm))
             )
 
         H, edges = np.histogram(x, bins, weights=weights)

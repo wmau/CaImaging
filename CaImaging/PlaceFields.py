@@ -108,7 +108,7 @@ class PlaceFields:
         if self.meta["circular"]:
             self.data["velocity"] *= circle_radius
         self.data["velocity"] = savgol_filter(
-            self.data["velocity"], self.meta["fps"], 1
+            self.data["velocity"], 15, 1
         )
         self.data["running"] = self.data["velocity"] > self.meta["velocity_threshold"]
 
