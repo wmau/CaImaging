@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from pathlib import Path
 import re
+from tqdm import tqdm
 
 from CaImaging.Miniscope import open_minian
 
@@ -20,9 +21,9 @@ from tkinter import filedialog
 
 def concat_avis(
     path=None,
-    pattern="behavCam*.avi",
+    pattern="*.avi",
     fname=None,
-    fps=30,
+    fps=15,
     isColor=True,
     delete_original_files=False,
 ):
@@ -97,6 +98,19 @@ def concat_avis(
         [os.remove(file) for file in files]
 
     return final_clip_name
+
+
+def batch_concat_avis(path: str,
+                      pattern='*.avi',
+                      fname=None,
+                      fps=15,
+                      isColor=True,
+                      delete_original_files=False):
+    folders = search_for_folders(path, '^BehavCam.*$')
+
+    for folder in folders:
+        concat_avis(folder, pattern=pattern, fname=fname, fps=fps,
+                    isColor=isColor, delete_original_files=delete_original_files)
 
 
 def get_session_folders(mouse_folder):
@@ -504,7 +518,7 @@ class ScrollPlot:
             self.current_position += 1
         elif event.key == "left" and self.current_position > 0:
             self.current_position -= 1
-        elif event.key == "escape":
+        elif event.key == "down":
             plt.close(self.fig)
 
     def update_plots(self, event):
@@ -893,6 +907,84 @@ def contiguous_regions(condition):
     return idx
 
 
+def fix_video(fnames, frame_numbers):
+    folder = os.path.join(os.path.split(fnames[0])[0], 'repaired')
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+        print(f'Created {folder}')
+
+    compressionCodec = "FFV1"
+    codec = cv2.VideoWriter_fourcc(*compressionCodec)
+
+    buffer_size = 8184
+    shift_amount = buffer_size * 2
+    # For each video...
+    for video, bad_frame_numbers in zip(fnames, frame_numbers):
+        print(f'Rewriting {video}')
+        cap = cv2.VideoCapture(video)
+        rows, cols = int(cap.get(4)), int(cap.get(3))
+
+        fname = os.path.split(video)[1]
+        new_fpath = os.path.join(folder, fname)
+
+        writeFile = cv2.VideoWriter(new_fpath, codec, 60,
+                                    (cols, rows), isColor=False)
+
+        for frame_number in tqdm(range(int(cap.get(7)))):
+            ret, frame = cap.read()
+
+            if ret:
+                write_frame = frame[:, :, 0]
+
+                if frame_number in bad_frame_numbers:
+                    flattened_frame = write_frame.copy().flatten()
+
+                    for r in range(rows):
+                        for c in range(cols):
+                            pixel_number = r * cols + c
+                            buf_num = int(pixel_number / buffer_size)
+
+                            if ((buf_num % 2) == 0):
+                                if ((pixel_number + shift_amount) < (
+                                        rows * cols)):
+                                    flattened_frame[pixel_number] = \
+                                    flattened_frame[
+                                        pixel_number + shift_amount]
+
+                    write_frame = flattened_frame.reshape(
+                        (rows, cols))
+
+                writeFile.write(np.uint8(write_frame))
+            else:
+                break
+
+        writeFile.release()
+        cap.release()
+    cv2.destroyAllWindows()
+
+
+def search_for_folders(folder, expression):
+    folders = []
+    for root, dirs, _ in os.walk(folder):
+        dirs[:] = [d for d in dirs if not re.match("^.*\.zarr$", d)]
+        for directory in dirs:
+            if re.match(expression, directory):
+                folders.append(os.path.join(root, directory))
+
+    return folders
+
+
+def search_for_files(folder, expression):
+    matched_files = []
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            if re.match(expression, file):
+                matched_files.append(os.path.join(root, file))
+
+    return matched_files
+
+
+
 if __name__ == "__main__":
     # folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
     # behavior_data = os.path.join(folder, 'PreprocessedBehavior.csv')
@@ -907,3 +999,4 @@ if __name__ == "__main__":
     timestamp_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\timestamp.dat"
 
     # sync_data(behavior_path, minian_path, timestamp_path, miniscope_cam=2, behav_cam=0)
+
