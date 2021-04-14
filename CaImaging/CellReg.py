@@ -8,6 +8,7 @@ import numpy as np
 import glob
 import h5py
 import pickle
+import hdf5storage
 import pandas as pd
 
 
@@ -74,7 +75,9 @@ class SpatialFootprints:
                 footprints = np.rollaxis(footprints, 2)
 
             # Save.
-            savemat(fname, {"footprints": footprints})
+            matfiledata = {}
+            matfiledata[u'footprints'] = footprints
+            hdf5storage.writes(mdict=matfiledata, filename=Path(fname))
             print(f"Saved {fname}")
 
 

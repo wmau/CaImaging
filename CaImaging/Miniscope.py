@@ -251,8 +251,8 @@ def get_transient_timestamps(
     return event_times, event_mags, bool_arr
 
 if __name__ == "__main__":
-    folder = r"C:\Users\wm228\OneDrive\Documents\Sinai\Projects\Circle track\M1\03_09_2020\H11_M38_S32"
-    # data = sync_preprocessed_data(folder)
+    folder = r"Z:\Will\RemoteReversal\Data\Oberon\2021_03_19_Reversal\10_20_31\Miniscope"
+    data = open_minian(folder)
 
     pass
 
