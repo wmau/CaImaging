@@ -545,7 +545,8 @@ def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
         ax2.set_ylim(bottom=0)
         ax.set_ylabel('Ensemble activation [a.u.]')
         ax.set_xlabel('Time [frame]')
-        ax2.set_ylabel('Neuron #', rotation=-90)
+        ax2.set_ylabel('Neurons grouped by ensembles', rotation=-90)
+        ax2.set_yticks([0, len(spikes)])
 
     return fig, axes
 

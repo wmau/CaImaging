@@ -250,6 +250,25 @@ def get_transient_timestamps(
 
     return event_times, event_mags, bool_arr
 
+def plot_traces(minian_path, neurons=range(10), step=5):
+    data = open_minian(minian_path)
+    traces = data['C']
+
+    # Make shift vector.
+    yshift = [x*step for x in neurons]
+
+    fig, ax = plt.subplots()
+    # Plot traces with a shift.
+    for shift, trace in zip(yshift, traces[neurons]):
+        ax.plot(trace+shift)
+
+    ax.axis('off')
+
+# Plot traces with a shift.
+    for shift, trace in zip(yshift, traces[neurons]):
+        ax.plot(t, trace+shift)
+
+
 if __name__ == "__main__":
     folder = r"Z:\Will\RemoteReversal\Data\Oberon\2021_03_19_Reversal\10_20_31\Miniscope"
     data = open_minian(folder)
