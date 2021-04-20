@@ -984,6 +984,24 @@ def search_for_files(folder, expression):
     return matched_files
 
 
+def cart2pol(x, y):
+    """
+    Cartesian to polar coordinates. For linearizing circular trajectory.
+
+    :parameters
+    ---
+    x, y: array-like
+        x, y coordinates
+
+    :return
+    ---
+    (phi, rho): tuple
+        Angle (linearized distance) and radius (distance from center).
+    """
+    rho = np.sqrt(x ** 2 + y ** 2)
+    phi = np.arctan2(y, x)
+
+    return (phi, rho)
 
 if __name__ == "__main__":
     # folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
@@ -999,4 +1017,5 @@ if __name__ == "__main__":
     timestamp_path = r"Z:\Lingxuan\LC_miniscope\G09-G15\Imaging\G11\8_10_2020\H11_M18_S5\timestamp.dat"
 
     # sync_data(behavior_path, minian_path, timestamp_path, miniscope_cam=2, behav_cam=0)
+
 

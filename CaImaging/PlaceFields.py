@@ -5,7 +5,7 @@ from random import randint
 import multiprocessing as mp
 from joblib import Parallel, delayed
 from tqdm import tqdm
-from CaImaging.util import consecutive_dist
+from CaImaging.util import consecutive_dist, cart2pol
 from scipy.signal import savgol_filter
 from sklearn.impute import SimpleImputer
 
@@ -25,7 +25,6 @@ class PlaceFields:
         shuffle_test=False,
         fps=None,
         velocity_threshold=10,
-        circle_radius=1,
     ):
         """
         Place field object.
@@ -37,9 +36,8 @@ class PlaceFields:
 
         x, y: (t,) arrays
             Positions per sample. Should be in cm. If circular==True,
-            x can also be in radians, but you should also use
-            circle_radius. And also if circular==True, y should be
-            an array of zeros.
+            x will be converted to radians, but you should also use
+            circle_radius.
 
         neural_data: (n,t) array
             Neural activity (usually S).
@@ -58,7 +56,7 @@ class PlaceFields:
             time vector.
 
         velocity_threshold: float
-            Velocity to threshold whether animal is running or not.
+            Velocity to threshold whether animal is running or not (cm/s).
 
         circle_radius: float
             Radius of circular track in cm (38.1 for Will's tracK).
@@ -82,13 +80,6 @@ class PlaceFields:
             "velocity_threshold": velocity_threshold,
         }
 
-        if self.meta["circular"]:
-            self.meta["circle_radius"] = circle_radius
-
-        # If we're using circular position, data must be in radians.
-        if any(self.data["x"] > 2 * np.pi) and self.meta["circular"]:
-            raise ValueError("x must be [0, 2pi]")
-
         # Get fps.
         if fps is None:
             self.meta["fps"] = self.get_fps()
@@ -97,20 +88,28 @@ class PlaceFields:
 
         # Compute distance and velocity. Smooth the velocity.
         d = consecutive_dist(
-            np.asarray((self.data["x"], self.data["x"])).T, zero_pad=True
+            np.asarray((self.data["x"], self.data["y"])).T, zero_pad=True
         )
-        if self.meta["circular"]:
-            too_far = d > np.pi
-            d[too_far] = abs((2 * np.pi) - d[too_far])
-        self.data["velocity"] = d / (1 / self.meta["fps"])
-
-        # Convert radians to arc length by the formula s=r*theta.
-        if self.meta["circular"]:
-            self.data["velocity"] *= circle_radius
-        self.data["velocity"] = savgol_filter(
-            self.data["velocity"], 15, 1
-        )
+        self.data["velocity"] = d / np.diff(t/1000, prepend=0)
         self.data["running"] = self.data["velocity"] > self.meta["velocity_threshold"]
+
+        # If we're using circular position, convert data to radians.
+        if self.meta["circular"]:
+            x_extrema = [min(x), max(x)]
+            y_extrema = [min(y), max(y)]
+            width = np.diff(x_extrema)[0]
+            height = np.diff(y_extrema)[0]
+
+            self.meta["circle_radius"] = np.mean([width, height]) / 2
+            center = [np.mean(x_extrema), np.mean(y_extrema)]
+
+            # Convert to angles (linear position) and radii (distance from center).
+            angles, radii = cart2pol(x - center[0], y - center[1])
+
+            # Shift everything so that 12 o'clock (pi/2) is 0.
+            angles += np.pi / 2
+            self.data['x'] = np.mod(angles, 2 * np.pi)
+            self.data['y'] = np.zeros_like(self.data['x'])
 
         # Make occupancy maps and place fields.
         (
