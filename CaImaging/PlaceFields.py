@@ -164,10 +164,15 @@ class PlaceFields:
             order = np.argsort(self.data["placefield_centers"][neurons])
 
         if normalize:
-            pfs = pfs / pfs.nanmax(axis=1)[:, np.newaxis]
+            pfs /= np.nanmax(pfs, axis=1)[:, np.newaxis]
 
         fig, ax = plt.subplots()
         ax.imshow(pfs[order])
+        ax.axis('tight')
+        ax.set_xlabel('Position')
+        ax.set_ylabel('Neuron #')
+
+        return fig, ax
 
     def find_pf_centers(self):
         centers = [np.argmax(pf) for pf in self.data["placefields"]]
