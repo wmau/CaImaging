@@ -116,7 +116,8 @@ class PlaceFields:
             self.data["occupancy_map"],
             self.data["occupancy_bins"],
         ) = self.make_occupancy_map(show_plot=False)
-        self.data["placefields"] = self.make_all_place_fields()
+        self.data["placefields"] = self.make_all_place_fields(normalize=False)
+        self.data["placefields_normalized"] = self.make_all_place_fields(normalize=True)
         self.data["spatial_info"] = [
             spatial_information(pf, self.data["occupancy_map"])
             for pf in self.data["placefields"]
@@ -143,7 +144,7 @@ class PlaceFields:
 
         return int(fps)
 
-    def make_all_place_fields(self):
+    def make_all_place_fields(self, normalize=False):
         """
         Compute the spatial rate maps of all neurons.
 
@@ -151,14 +152,14 @@ class PlaceFields:
         """
         pfs = []
         for neuron in range(self.data["neural"].shape[0]):
-            pfs.append(self.make_place_field(neuron, show_plot=False))
+            pfs.append(self.make_place_field(neuron, show_plot=False, normalize_by_occ=normalize))
 
         return np.asarray(pfs)
 
     def make_snake_plot(self, order="sorted", neurons="all", normalize=True):
         if neurons == "all":
             neurons = np.asarray([int(n) for n in range(self.data["n_neurons"])])
-        pfs = self.data["placefields"][neurons]
+        pfs = self.data["placefields_normalized"][neurons]
 
         if order == "sorted":
             order = np.argsort(self.data["placefield_centers"][neurons])
@@ -175,14 +176,14 @@ class PlaceFields:
         return fig, ax
 
     def find_pf_centers(self):
-        centers = [np.argmax(pf) for pf in self.data["placefields"]]
+        centers = [np.argmax(pf) for pf in self.data["placefields_normalized"]]
 
         return np.asarray(centers)
 
     def assess_spatial_sig(self, neuron, n_shuffles=500):
         shuffled_SIs = []
         for i in range(n_shuffles):
-            shuffled_pf = self.make_place_field(neuron, show_plot=False, shuffle=True)
+            shuffled_pf = self.make_place_field(neuron, show_plot=False, normalize_by_occ=False, shuffle=True)
             shuffled_SIs.append(
                 spatial_information(shuffled_pf, self.data["occupancy_map"])
             )
@@ -208,7 +209,7 @@ class PlaceFields:
 
         pvals, SI_z = zip(*results)
 
-        return pvals, SI_z
+        return np.asarray(pvals), np.asarray(SI_z)
 
     def plot_dots(
         self, neuron, std_thresh=2, pos_color="k", transient_color="r", ax=None
@@ -273,7 +274,7 @@ class PlaceFields:
         return occupancy_map, occupancy_bins
 
     def make_place_field(
-        self, neuron, show_plot=True, normalize_by_occ=True, ax=None, shuffle=False
+        self, neuron, show_plot=True, normalize_by_occ=False, ax=None, shuffle=False
     ):
         """
         Bins activity in space. Essentially a 2d histogram weighted by
@@ -313,7 +314,10 @@ class PlaceFields:
             if ax is None:
                 fig, ax = plt.subplots()
 
-            ax.imshow(pf, origin="lower")
+            if self.meta['circular']:
+                ax.plot(pf)
+            else:
+                ax.imshow(pf, origin="lower")
 
         return pf
 
@@ -339,7 +343,7 @@ class PlaceFields:
 
 def spatial_information(tuning_curve, occupancy):
     """
-    Calculate spatital information in one neuron's activity.
+    Calculate spatial information in one neuron's activity.
 
     :parameters
     ---
