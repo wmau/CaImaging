@@ -538,6 +538,7 @@ def plot_assemblies(assembly_act, spiking, do_zscore=True, colors=None):
         for activation, assembly_color in zip(act, uniq_colors):
             ax.plot(activation, color=assembly_color, alpha=0.7)
         ax2 = ax.twinx()
+        ax2.invert_yaxis()
 
         # Plot S.
         ax2.eventplot(spikes, colors=c)
