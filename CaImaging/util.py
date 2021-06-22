@@ -26,6 +26,7 @@ def concat_avis(
     fps=15,
     isColor=True,
     delete_original_files=False,
+    gain=1,
 ):
     """
     Concatenates behavioral avi files for ezTrack.
@@ -67,7 +68,7 @@ def concat_avis(
         return final_clip_name
 
     # Define writer.
-    fourcc = 0
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
     writer = cv2.VideoWriter(final_clip_name, fourcc, fps, size, isColor=isColor)
 
     for file in files:
@@ -84,7 +85,7 @@ def concat_avis(
                 if not isColor:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                writer.write(frame)
+                writer.write(frame * gain)
             else:
                 break
 
