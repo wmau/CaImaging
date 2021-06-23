@@ -257,8 +257,8 @@ class PlaceFields:
 
         """
         temp = spatial_bin(
-            self.data["x"],
-            self.data["y"],
+            self.data["x"][self.data["running"]],
+            self.data["y"][self.data["running"]],
             bin_size_cm=self.meta["bin_size"],
             show_plot=show_plot,
             one_dim=self.meta["circular"],
