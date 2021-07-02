@@ -148,7 +148,7 @@ def make_bins(data, samples_per_bin, axis=1):
     return bins.astype(int)
 
 
-def bin_transients(data, bin_size_in_seconds, fps=15):
+def bin_transients(data, bin_size_in_seconds, fps=15, non_binary=False):
     """
     Bin data then sum the number of "S" (deconvolved S matrix)
     within each bin.
@@ -182,7 +182,10 @@ def bin_transients(data, bin_size_in_seconds, fps=15):
     binned = np.split(data, bins, axis=1)
 
     # Sum the number of "S" per bin.
-    summed = [np.sum(bin > 0, axis=1) for bin in binned]
+    if non_binary:
+        summed = [np.sum(bin, axis=1) for bin in binned]
+    else:
+        summed = [np.sum(bin > 0, axis=1) for bin in binned]
 
     return np.vstack(summed).T
 

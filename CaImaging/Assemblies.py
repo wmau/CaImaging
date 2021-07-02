@@ -462,7 +462,7 @@ def lapsed_activation(act_list, nullhyp='circ', n_shuffles=1000,
 #         sorted_spikes.append(session_sorted_spikes)
 #
 #     # Plot assembly activations.
-#     if plot:
+#     if show_plot:
 #         fig, axes = plot_assemblies(activations, sorted_spikes,
 #                                     colors=color_list)
 #

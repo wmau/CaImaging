@@ -6,9 +6,9 @@ import os
 from scipy.io import savemat
 import numpy as np
 import glob
+import hdf5storage
 import h5py
 import pickle
-import hdf5storage
 import pandas as pd
 
 

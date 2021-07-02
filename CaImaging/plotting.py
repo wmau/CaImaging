@@ -50,6 +50,12 @@ def errorfill(x, y, yerr, color=None, alpha_fill=0.3, ax=None, label=None):
     ax.plot(x, y, color=color, label=label)
     ax.fill_between(x, ymax, ymin, color=color, alpha=alpha_fill)
 
+
+def jitter_x(arr, jitter=0.05):
+    jittered = arr + np.random.randn(len(arr)) * jitter
+
+    return jittered
+
 def beautify_ax(ax):
     ax.tick_params(right="off",top="off",length = 4, width = 1, direction = "out")
     ax.spines["top"].set_visible(False), ax.spines["right"].set_visible(False)
