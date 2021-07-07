@@ -880,6 +880,9 @@ def cluster(data, maxgap):
             groups.append([x])
     return groups
 
+def stack_padding(l, fillvalue=np.nan):
+    return np.column_stack((itertools.zip_longest(*l,
+                                                  fillvalue=fillvalue)))
 
 def round_up_to_odd(f):
     return int(np.ceil(f) // 2 * 2 + 1)
