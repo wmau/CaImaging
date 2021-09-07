@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 from natsort import natsorted
 import os
 import dask.array as darr
@@ -276,3 +277,33 @@ if __name__ == "__main__":
     pass
 
 
+def nan_corrupted_frames(miniscope_folder, C, S, frames):
+    bad_frames_folder = os.path.join(miniscope_folder, "bad_frames")
+    if os.path.exists(bad_frames_folder):
+        bad_frames = [
+            int(os.path.splitext(fname)[0]) for fname in os.listdir(bad_frames_folder)
+        ]
+        n_frames = len(bad_frames)
+        print(f"{n_frames} bad frames found. Correcting...")
+
+        match = np.asarray([x in bad_frames for x in frames])
+        C[:, match] = np.nan
+        S[:, match] = np.nan
+    else:
+        pass
+
+    return C, S
+
+
+def spot_check_minian(folder):
+    data = open_minian(folder)
+    spike_times = get_transient_timestamps(data["S"],
+                                           thresh_type="eps")[0]
+
+    fig, axs = plt.subplots(2, 1, sharex=True, figsize=(8,10))
+    axs[0].eventplot(spike_times, color='k')
+    axs[0].set_ylabel("Neurons", rotation=-90)
+    axs[0].set_yticks([0, len(spike_times)])
+    axs[1].plot(data.motion)
+
+    return data
