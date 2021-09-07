@@ -11,6 +11,7 @@ import tkinter as tk
 from pathlib import Path
 import re
 from tqdm import tqdm
+from shutil import copytree, ignore_patterns
 
 from CaImaging.Miniscope import open_minian
 
@@ -697,7 +698,11 @@ def sync_cameras_v4(miniscope_file, behavior_file):
     return ts_map, ts
 
 
-def sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=6, behav_cam=1):
+def sync_data(behavior_data,
+              minian_path,
+              timestamp_path,
+              miniscope_cam=6, behav_cam=1,
+              convert_to_np=True):
     """
     Synchronizes minian and behavior time series.
 
@@ -769,9 +774,16 @@ def sync_data(behavior_data, minian_path, timestamp_path, miniscope_cam=6, behav
     synced_behavior.reset_index(drop=True, inplace=True)
 
     # Calcium data.
+    if convert_to_np:
+        C = np.asarray(minian.C.sel(frame=miniscope_frames)),
+        S = np.asarray(minian.S.sel(frame=miniscope_frames))
+    else:
+        C = minian.C.sel(frame=miniscope_frames)
+        S = minian.S.sel(frame=miniscope_frames)
+
     ca_data = {
-        "C": np.asarray(minian.C.sel(frame=miniscope_frames)),
-        "S": np.asarray(minian.S.sel(frame=miniscope_frames)),
+        "C": C,
+        "S": S,
         "frames": miniscope_frames,
         #'A': np.asarray(minian.A)
     }
@@ -1009,6 +1021,10 @@ def cart2pol(x, y):
     phi = np.arctan2(y, x)
 
     return (phi, rho)
+
+def copy_tree_ignore_minian(src, dst):
+    copytree(src, dst, ignore=ignore_patterns('*.*', 'minian'))
+
 
 if __name__ == "__main__":
     # folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'
