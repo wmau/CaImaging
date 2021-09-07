@@ -22,6 +22,7 @@ class PlaceFields:
         neural_data,
         bin_size=20,
         circular=False,
+        linearized=False,
         shuffle_test=False,
         fps=None,
         velocity_threshold=10,
@@ -58,10 +59,6 @@ class PlaceFields:
         velocity_threshold: float
             Velocity to threshold whether animal is running or not (cm/s).
 
-        circle_radius: float
-            Radius of circular track in cm (38.1 for Will's tracK).
-
-
         """
         imp = SimpleImputer(missing_values=np.nan, strategy='constant',
                             fill_value=0)
@@ -76,7 +73,9 @@ class PlaceFields:
         }
         self.meta = {
             "circular": circular,
+            "linearized": True if circular else linearized,
             "bin_size": bin_size,
+            "nbins": nbins,
             "velocity_threshold": velocity_threshold,
         }
 
@@ -261,7 +260,7 @@ class PlaceFields:
             self.data["y"][self.data["running"]],
             bin_size_cm=self.meta["bin_size"],
             show_plot=show_plot,
-            one_dim=self.meta["circular"],
+            one_dim=self.meta["linearized"],
         )
         occupancy_map, occupancy_bins = temp[0], temp[-1]
 
@@ -302,7 +301,7 @@ class PlaceFields:
             bin_size_cm=self.meta["bin_size"],
             show_plot=False,
             weights=neural_data[self.data["running"]],
-            one_dim=self.meta["circular"],
+            one_dim=self.meta["linearized"],
             bins=self.data["occupancy_bins"],
         )[0]
 
