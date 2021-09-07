@@ -26,6 +26,7 @@ class PlaceFields:
         shuffle_test=False,
         fps=None,
         velocity_threshold=10,
+        nbins=50,
     ):
         """
         Place field object.
