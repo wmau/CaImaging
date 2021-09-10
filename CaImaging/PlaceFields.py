@@ -26,7 +26,7 @@ class PlaceFields:
         shuffle_test=False,
         fps=None,
         velocity_threshold=10,
-        nbins=50,
+        nbins=None,
     ):
         """
         Place field object.
@@ -64,6 +64,10 @@ class PlaceFields:
         imp = SimpleImputer(missing_values=np.nan, strategy='constant',
                             fill_value=0)
         neural_data = imp.fit_transform(neural_data.T).T
+
+        if bin_size is not None and nbins is not None:
+            print('Warning! Both bin_size and nbins were assigned values. '
+                  'nbins will take priority. Proceed with caution.')
 
         self.data = {
             "t": t,
@@ -262,6 +266,7 @@ class PlaceFields:
             bin_size_cm=self.meta["bin_size"],
             show_plot=show_plot,
             one_dim=self.meta["linearized"],
+            nbins=self.meta["nbins"]
         )
         occupancy_map, occupancy_bins = temp[0], temp[-1]
 
@@ -300,6 +305,7 @@ class PlaceFields:
             self.data["x"][self.data["running"]],
             self.data["y"][self.data["running"]],
             bin_size_cm=self.meta["bin_size"],
+            nbins=self.meta["nbins"],
             show_plot=False,
             weights=neural_data[self.data["running"]],
             one_dim=self.meta["linearized"],
