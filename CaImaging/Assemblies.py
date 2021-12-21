@@ -290,6 +290,11 @@ def find_assemblies(neural_data, method='ica', nullhyp='mp',
     else:
         actmat = stats.zscore(neural_data, axis=1)
 
+    # Replace NaNs.
+    imp = SimpleImputer(missing_values=np.nan, strategy='constant',
+                            fill_value=0)
+    actmat = imp.fit_transform(actmat.T).T
+
     patterns, significance, z_data = \
         runPatterns(actmat, method=method, nullhyp=nullhyp,
                     nshu=n_shuffles, percentile=percentile,
