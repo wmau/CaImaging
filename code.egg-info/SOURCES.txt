@@ -1,0 +1,15 @@
+setup.py
+CaImaging/Assemblies.py
+CaImaging/Behavior.py
+CaImaging/CellReg.py
+CaImaging/LickArduino.py
+CaImaging/Miniscope.py
+CaImaging/PCA_funcs.py
+CaImaging/PlaceFields.py
+CaImaging/__init__.py
+CaImaging/plotting.py
+CaImaging/util.py
+code.egg-info/PKG-INFO
+code.egg-info/SOURCES.txt
+code.egg-info/dependency_links.txt
+code.egg-info/top_level.txt
