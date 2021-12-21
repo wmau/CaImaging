@@ -43,7 +43,7 @@ class PlaceFields:
 
         neural_data: (n,t) array
             Neural activity (usually S).
-
+`
         bin_size: int
             Bin size in cm.
 
@@ -57,7 +57,7 @@ class PlaceFields:
             Sampling rate. If None, will try to compute based on supplied
             time vector.
 
-        velocity_threshold: float
+        threshold: float
             Velocity to threshold whether animal is running or not (cm/s).
 
         """
@@ -81,7 +81,7 @@ class PlaceFields:
             "linearized": True if circular else linearized,
             "bin_size": bin_size,
             "nbins": nbins,
-            "velocity_threshold": velocity_threshold,
+            "threshold": velocity_threshold,
         }
 
         # Get fps.
@@ -95,7 +95,7 @@ class PlaceFields:
             np.asarray((self.data["x"], self.data["y"])).T, zero_pad=True
         )
         self.data["velocity"] = d / np.diff(t/1000, prepend=0)
-        self.data["running"] = self.data["velocity"] > self.meta["velocity_threshold"]
+        self.data["running"] = self.data["velocity"] > self.meta["threshold"]
 
         # If we're using circular position, convert data to radians.
         if self.meta["circular"]:

@@ -265,17 +265,6 @@ def plot_traces(minian_path, neurons=range(10), step=5):
 
     ax.axis('off')
 
-# Plot traces with a shift.
-    for shift, trace in zip(yshift, traces[neurons]):
-        ax.plot(t, trace+shift)
-
-
-if __name__ == "__main__":
-    folder = r"Z:\Will\RemoteReversal\Data\Oberon\2021_03_19_Reversal\10_20_31\Miniscope"
-    data = open_minian(folder)
-
-    pass
-
 
 def nan_corrupted_frames(miniscope_folder, C, S, frames):
     bad_frames_folder = os.path.join(miniscope_folder, "bad_frames")
@@ -307,3 +296,9 @@ def spot_check_minian(folder):
     axs[1].plot(data.motion)
 
     return data
+
+if __name__ == "__main__":
+    folder = r"Z:\Will\RemoteReversal\Data\Oberon\2021_03_19_Reversal\10_20_31\Miniscope"
+    data = open_minian(folder)
+
+    pass
