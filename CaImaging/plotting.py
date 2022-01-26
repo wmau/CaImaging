@@ -58,7 +58,7 @@ def jitter_x(arr, jitter=0.05):
 
 def beautify_ax(ax):
     ax.tick_params(right="off",top="off",length = 4, width = 1, direction = "out")
-    ax.spines["top"].set_visible(False), ax.spines["right"].set_visible(False)
+    [ax.spines[side].set_visible(False) for side in ['top', 'right']]
     ax.yaxis.set_ticks_position('left')
     ax.xaxis.set_ticks_position('bottom')
     for line in ["left","bottom"]:
