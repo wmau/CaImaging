@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 from tqdm import tqdm
 from shutil import copytree, ignore_patterns
+import scipy.cluster.hierarchy as sch
+from scipy.spatial.distance import squareform
 
 from CaImaging.Miniscope import open_minian
 
@@ -1025,6 +1027,47 @@ def cart2pol(x, y):
 def copy_tree_ignore_minian(src, dst):
     copytree(src, dst, ignore=ignore_patterns('*.*', 'minian'))
 
+def cluster_corr(corr_array, inplace=False):
+    """
+    Rearranges the correlation matrix, corr_array, so that groups of highly
+    correlated variables are next to each other
+
+    Parameters
+    ----------
+    corr_array : pandas.DataFrame or numpy.ndarray
+        a NxN correlation matrix
+
+    Returns
+    -------
+    pandas.DataFrame or numpy.ndarray
+        a NxN correlation matrix with the columns and rows rearranged
+    """
+    corr_array = (corr_array + corr_array.T)/2
+    np.fill_diagonal(corr_array, 1)
+    dissimilarity = 1 - np.abs(corr_array)
+    pairwise_distances = sch.distance.pdist(dissimilarity)
+    linkage = sch.linkage(pairwise_distances, method='complete')
+    cluster_distance_threshold = pairwise_distances.max()/2
+    labels = sch.fcluster(linkage, cluster_distance_threshold, criterion='distance')
+    idx = np.argsort(labels)
+
+    if not inplace:
+        corr_array = corr_array.copy()
+
+    if isinstance(corr_array, pd.DataFrame):
+        return corr_array.iloc[idx, :].T.iloc[idx, :]
+
+    return labels, idx, linkage
+
+def cluster_corr2(corr_array):
+    corr_array = (corr_array + corr_array.T)/2
+    np.fill_diagonal(corr_array, 1)
+    dissimilarity = 1 - np.abs(corr_array)
+    threshold = np.max(dissimilarity)/2
+    hierarchy = sch.linkage(squareform(dissimilarity), method='complete')
+    labels = sch.fcluster(hierarchy, threshold, criterion='distance')
+
+    return labels
 
 if __name__ == "__main__":
     # folder = r'Z:\Will\Drift\Data\Betelgeuse_Scope25\08_03_2020_CircleTrackReversal1\H15_M30_S35'

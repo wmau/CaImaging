@@ -389,6 +389,10 @@ def spatial_information(tuning_curve, occupancy):
 
     return bits_per_spk
 
+def define_field_bins(placefield, field_threshold=0.5):
+    field_bins = np.where(placefield >= max(placefield) * field_threshold)[0]
+
+    return field_bins
 
 if __name__ == "__main__":
     mouse = "G132"
