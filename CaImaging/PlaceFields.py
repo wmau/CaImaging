@@ -81,7 +81,7 @@ class PlaceFields:
             "linearized": True if circular else linearized,
             "bin_size": bin_size,
             "nbins": nbins,
-            "threshold": velocity_threshold,
+            "velocity_threshold": velocity_threshold,
         }
 
         # Get fps.
@@ -95,7 +95,7 @@ class PlaceFields:
             np.asarray((self.data["x"], self.data["y"])).T, zero_pad=True
         )
         self.data["velocity"] = d / np.diff(t/1000, prepend=0)
-        self.data["running"] = self.data["velocity"] > self.meta["threshold"]
+        self.data["running"] = self.data["velocity"] > self.meta["velocity_threshold"]
 
         # If we're using circular position, convert data to radians.
         if self.meta["circular"]:
