@@ -3,7 +3,7 @@ from CaImaging.Miniscope import open_minian
 from CaImaging.plotting import overlay_footprints
 from pathlib import Path
 import os
-from scipy.io import savemat
+from natsort import natsorted
 import numpy as np
 import glob
 import hdf5storage
@@ -111,7 +111,10 @@ class CellRegObj:
             Session names.
         """
         mat_files = glob.glob(os.path.join(os.path.split(self.path)[0], "*.mat"))
-        sessions = [os.path.split(os.path.splitext(i)[0])[-1] for i in mat_files]
+
+        # Based on comments from Y.Z. and D.M., CellReg sorts the sessions, so
+        # we must also sort.
+        sessions = natsorted([os.path.split(os.path.splitext(i)[0])[-1] for i in mat_files])
 
         return sessions
 
