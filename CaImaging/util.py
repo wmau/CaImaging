@@ -777,7 +777,7 @@ def sync_data(behavior_data,
 
     # Calcium data.
     if convert_to_np:
-        C = np.asarray(minian.C.sel(frame=miniscope_frames)),
+        C = np.asarray(minian.C.sel(frame=miniscope_frames))
         S = np.asarray(minian.S.sel(frame=miniscope_frames))
     else:
         C = minian.C.sel(frame=miniscope_frames)
@@ -839,7 +839,6 @@ def zscore_list(lst):
     z_list = [compute_z_from(i, mu, sigma) for i in lst]
 
     return z_list
-
 
 def sem(arr, axis=0):
     """
